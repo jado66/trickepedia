@@ -1,9 +1,9 @@
-import { ContributorBanner } from "@/components/contributor-banner";
+import { VariableBanner } from "@/components/banners/variable-banner";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <ContributorBanner />
+      <VariableBanner />
       {children}
     </>
   );
