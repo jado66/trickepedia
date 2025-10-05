@@ -681,7 +681,7 @@ export function TricksBrowser({
                     variant="secondary"
                     className="flex items-center gap-1 pr-1"
                   >
-                    Search: "{searchTerm}"
+                    Search: &quot;{searchTerm}&quot;
                     <button
                       aria-label="Clear search"
                       className="ml-1 hover:text-destructive/80"
@@ -752,7 +752,7 @@ export function TricksBrowser({
         <div className="flex flex-wrap gap-2 -mt-2">
           {searchTerm && (
             <Badge variant="secondary" className="flex items-center gap-1 pr-1">
-              Search: "{searchTerm}"
+              Search: &quot;{searchTerm}&quot;
               <button
                 aria-label="Clear search"
                 className="ml-1 hover:text-destructive/80"
