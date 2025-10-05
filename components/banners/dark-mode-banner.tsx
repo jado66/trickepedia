@@ -25,9 +25,9 @@ export function DarkModeUnlockBanner() {
   const xpProgress = user?.xp || 0;
 
   const handleInviteFriends = () => {
-    const referralLink = `${window.location.origin}/signup?ref=${encodeURIComponent(
-      user?.email || ""
-    )}`;
+    const referralLink = `${
+      window.location.origin
+    }/signup?ref=${encodeURIComponent(user?.email || "")}`;
     navigator.clipboard.writeText(referralLink);
     toast.success("Referral link copied!");
   };
@@ -50,19 +50,36 @@ export function DarkModeUnlockBanner() {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <Moon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Unlock Dark Mode</h2>
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                Unlock Dark Mode
+              </h2>
               <Sparkles className="h-3 w-3 text-purple-500" />
             </div>
 
             <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 leading-relaxed">
-              Earn <span className="font-semibold text-indigo-600 dark:text-indigo-400">500 XP</span> to unlock Dark Mode.
-              Invite friends (<span className="font-semibold">{referralsNeeded} referrals = 500 XP</span>) or add / edit tricks.
-              You have <span className="font-semibold text-indigo-600 dark:text-indigo-400">{xpProgress} XP</span>
+              Earn{" "}
+              <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                500 XP
+              </span>{" "}
+              to unlock Dark Mode. Invite friends (
+              <span className="font-semibold">
+                {referralsNeeded} referrals = 500 XP
+              </span>
+              ) or add / edit tricks. You have{" "}
+              <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                {xpProgress} XP
+              </span>
               {currentReferrals > 0 && (
                 <>
-                  {" "}and <span className="font-semibold text-purple-600 dark:text-purple-400">{currentReferrals} referral{currentReferrals !== 1 ? "s" : ""}</span>
+                  {" "}
+                  and{" "}
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">
+                    {currentReferrals} referral
+                    {currentReferrals !== 1 ? "s" : ""}
+                  </span>
                 </>
-              )}.
+              )}
+              .
             </p>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -87,7 +104,9 @@ export function DarkModeUnlockBanner() {
               </div>
               {/* Progress */}
               <div className="flex items-center gap-2 flex-1 min-w-[160px] ml-0 md:ml-2">
-                <span className="sr-only">Progress towards Dark Mode unlock</span>
+                <span className="sr-only">
+                  Progress towards Dark Mode unlock
+                </span>
                 <div className="relative h-2 flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-500 ease-out"
