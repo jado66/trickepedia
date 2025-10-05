@@ -71,7 +71,8 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
         if (ns.has(id)) ns.delete(id);
         else {
           ns.add(id);
-          if (categorySlug && subcategorySlug) loadTricks(categorySlug, subcategorySlug);
+          if (categorySlug && subcategorySlug)
+            loadTricks(categorySlug, subcategorySlug);
         }
         return ns;
       });
@@ -83,9 +84,13 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
       <div className="h-14" />
       <ScrollArea className="flex-1 px-3 py-4">
         {isLoading ? (
-          <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
         ) : error ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">{error}</div>
+          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+            {error}
+          </div>
         ) : (
           <nav className="flex flex-col gap-2">
             <Link
@@ -98,12 +103,15 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
             </Link>
 
             {categories.map((category) => {
-              const Icon = iconMap[category.icon_name ?? "circle"] || iconMap["circle"];
+              const Icon =
+                iconMap[category.icon_name ?? "circle"] || iconMap["circle"];
               const isExpanded = expandedItems.has(category.slug);
               return (
                 <div key={category.slug} className="flex flex-col">
                   <button
-                    onClick={() => toggleExpanded(category.slug, true, category.slug)}
+                    onClick={() =>
+                      toggleExpanded(category.slug, true, category.slug)
+                    }
                     className={cn(
                       "flex items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-muted",
                       isExpanded && "bg-sidebar-accent/50"
@@ -118,7 +126,12 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
                         </span>
                       )}
                     </div>
-                    <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-90")} />
+                    <ChevronRight
+                      className={cn(
+                        "h-3.5 w-3.5 transition-transform",
+                        isExpanded && "rotate-90"
+                      )}
+                    />
                   </button>
                   {isExpanded && (
                     <div className="ml-7 mt-1 mb-2 space-y-1">
@@ -144,11 +157,18 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
                               key={subcategory.slug}
                               open={open}
                               onOpenChange={() =>
-                                toggleExpanded(subcatKey, false, category.slug, subcategory.slug)
+                                toggleExpanded(
+                                  subcatKey,
+                                  false,
+                                  category.slug,
+                                  subcategory.slug
+                                )
                               }
                             >
                               <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-muted">
-                                <span className="text-left">{subcategory.name}</span>
+                                <span className="text-left">
+                                  {subcategory.name}
+                                </span>
                                 <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 data-[state=open]:rotate-90" />
                               </CollapsibleTrigger>
                               <CollapsibleContent className="pb-1 pt-1">
@@ -217,7 +237,9 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
               <span>FAQs</span>
             </Link>
 
-            <ThemeToggle variant="nav" className="w-full justify-start" />
+            {user && user.xp && user?.xp >= 500 && (
+              <ThemeToggle variant="nav" className="w-full justify-start" />
+            )}
 
             {hasModeratorAccess() && (
               <Collapsible
