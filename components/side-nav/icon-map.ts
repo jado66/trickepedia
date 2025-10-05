@@ -9,6 +9,7 @@ import {
   BrickWall,
   Diamond,
   Waypoints,
+  Fan,
 } from "lucide-react";
 
 export const iconMap = {
@@ -28,4 +29,5 @@ export const iconMap = {
   Target,
   Dumbbell,
   Layers,
+  Fan,
 };

@@ -18,6 +18,7 @@ import * as Icons from "lucide-react";
 import { PermissionGate } from "@/components/permission-gate";
 import { TricksBrowser } from "@/components/category/tricks-browser";
 import { iconMap } from "@/components/side-nav";
+import { getCategoryImage } from "@/components/category/category-images";
 import NotFoundComponent from "@/components/not-found";
 
 // Allow on-demand rendering so hidden/unlisted categories that are not part of any static paths still resolve.
@@ -133,6 +134,7 @@ export default async function CategoryPage({ params }: PageProps) {
   };
 
   const IconComponent = getIconComponent(category.icon_name || "circle");
+  const visual = getCategoryImage(category.slug);
 
   return (
     <div className="min-h-screen bg-background">
@@ -166,28 +168,73 @@ export default async function CategoryPage({ params }: PageProps) {
           </div>
         )}
 
-        {/* Category Header */}
-        <div className="text-center mb-12">
-          <div
-            className="w-24 h-24 rounded-2xl flex items-center justify-center mx-auto mb-6"
-            style={{ backgroundColor: category.color || "" }}
-          >
-            <IconComponent className="h-12 w-12 text-white" />
+        {/* Category Header (image hero) */}
+        <div className="relative mb-4 rounded-3xl  lg:w-1/2 mx-auto overflow-hidden border bg-muted/30 min-h-[280px] sm:min-h-[320px] md:min-h-[360px] flex items-stretch">
+          {visual ? (
+            <>
+              {/* Background blur layer for better image handling */}
+              <div
+                className="absolute inset-0 w-full h-full"
+                style={{
+                  backgroundImage: `url(${visual.image})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  filter: "blur(20px)",
+                  transform: "scale(1.1)",
+                }}
+              />
+              {/* Main image layer */}
+              <img
+                src={visual.image || "/placeholder.svg"}
+                alt={category.name}
+                className="absolute inset-0 w-full h-full object-cover object-top"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/20" />
+            </>
+          ) : (
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ backgroundColor: category.color || "hsl(var(--muted))" }}
+            >
+              <IconComponent className="h-24 w-24 text-white/60" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+            </div>
+          )}
+
+          <div className="relative z-10 px-6 md:px-12 py-12 md:py-16 flex flex-col justify-end w-full max-w-6xl mx-auto">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <Badge
+                variant="secondary"
+                className="text-xs backdrop-blur-sm bg-white/15 text-white border-white/25 shadow-lg"
+              >
+                {category.trick_count} total {category.move_name + "s"}
+              </Badge>
+              {!category.is_active && (
+                <Badge
+                  variant="outline"
+                  className="text-xs backdrop-blur-sm bg-amber-500/25 text-amber-50 border-amber-300/40 shadow-lg"
+                >
+                  Unlisted
+                </Badge>
+              )}
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white text-balance mb-3 drop-shadow-2xl">
+              {category.name}
+            </h1>
+
+            {category.description && (
+              <p className="text-base sm:text-lg md:text-xl text-white/95 max-w-3xl leading-relaxed drop-shadow-lg">
+                {category.description}
+              </p>
+            )}
           </div>
-          <h1 className="text-4xl font-bold text-balance mb-4">
-            {category.name}
-          </h1>
-          <p className="text-lg text-muted-foreground text-pretty max-w-2xl mx-auto mb-6">
-            {category.description}
-          </p>
-          <Badge variant="secondary" className="text-sm">
-            {category.trick_count} total {category.move_name + "s"}
-          </Badge>
         </div>
 
         <div className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold capitalize">
+          <div className="flex items-center justify-center mb-6">
+            <h2 className="text-2xl font-bold capitalize text-center">
               Explore {category.name} {category.move_name + "s"}
             </h2>
           </div>
@@ -217,7 +264,7 @@ export default async function CategoryPage({ params }: PageProps) {
           )}
         </div>
 
-        <div className="mb-12">
+        {/* <div className="mb-12">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-muted-foreground">
               Browse by Category
@@ -245,17 +292,10 @@ export default async function CategoryPage({ params }: PageProps) {
                         {subcategory.description}
                       </CardDescription>
                     </CardHeader>
-                    {/* <CardContent className="pt-0">
-                      <Badge variant="outline" className="text-xs">
-                        {subcategory.trick_count}{" "}
-                        {subcategory.trick_count === 1 ? "trick" : "tricks"}
-                      </Badge>
-                    </CardContent> */}
                   </Card>
                 </Link>
               ))}
 
-              {/* Management Card - Only visible to moderators/admins */}
               <PermissionGate requireModerator>
                 <Link href={`/admin/${category.slug}`}>
                   <Card className="h-full hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 cursor-pointer group">
@@ -290,7 +330,6 @@ export default async function CategoryPage({ params }: PageProps) {
                 </p>
               </div>
 
-              {/* Management Card for empty state */}
               <PermissionGate requireModerator>
                 <Link href={`/${category.slug}/manage-categories`}>
                   <Card className="w-full max-w-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group">
@@ -321,7 +360,7 @@ export default async function CategoryPage({ params }: PageProps) {
               </PermissionGate>
             </div>
           )}
-        </div>
+        </div> */}
       </main>
     </div>
   );

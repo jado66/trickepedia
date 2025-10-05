@@ -17,6 +17,7 @@ import { Search, ArrowRight, Settings } from "lucide-react";
 import { PermissionGate } from "@/components/permission-gate";
 import type { MasterCategory } from "@/lib/types/database";
 import { iconMap } from "@/components/side-nav";
+import { getCategoryImage } from "@/components/category/category-images";
 
 interface CategoriesSearchProps {
   categories: MasterCategory[];
@@ -61,45 +62,64 @@ export function CategoriesSearch({ categories }: CategoriesSearchProps) {
           </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Categories Grid (image cards) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredCategories.map((category) => {
             const IconComponent = getIconComponent(
               category.icon_name || "circle"
             );
+            const visual = getCategoryImage(category.slug);
             return (
-              <Link key={category.id} href={`/${category.slug}`}>
-                <Card className="h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group flex flex-col">
-                  <CardHeader className="text-center pb-4 flex-grow">
+              <Link
+                key={category.id}
+                href={`/${category.slug}`}
+                className="group"
+              >
+                <Card className="relative overflow-hidden h-72 flex flex-col justify-end border-2 hover:border-primary transition-all duration-300">
+                  {/* Background image */}
+                  {visual ? (
+                    <>
+                      <img
+                        src={visual.image}
+                        alt={category.name}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
+                    </>
+                  ) : (
                     <div
-                      className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300"
-                      style={{ backgroundColor: category.color || "" }}
+                      className="absolute inset-0 flex items-center justify-center"
+                      style={{
+                        backgroundColor: category.color || "hsl(var(--muted))",
+                      }}
                     >
-                      <IconComponent className="h-10 w-10 text-white" />
+                      <IconComponent className="h-16 w-16 text-white/80" />
                     </div>
-                    <CardTitle className="text-2xl mb-3">
-                      {category.name}
-                    </CardTitle>
-                    <CardDescription className="text-base text-pretty leading-relaxed">
-                      {category.description}
-                    </CardDescription>
-                  </CardHeader>
+                  )}
 
-                  <CardContent className="text-center pt-0 mt-auto">
-                    <div className="flex items-center justify-between mb-4">
-                      <Badge variant="secondary" className="text-sm">
-                        {category.trick_count} tricks
+                  {/* Content overlay */}
+                  <div className="relative z-10 p-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <Badge variant="secondary" className="text-xs">
+                        {category.trick_count}{" "}
+                        {category.move_name
+                          ? `${category.move_name}s`
+                          : "tricks"}
                       </Badge>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <ArrowRight className="h-4 w-4 text-white/80 group-hover:translate-x-1 transition-transform" />
                     </div>
-
-                    <Button
-                      variant="outline"
-                      className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors bg-transparent"
-                    >
-                      Explore {category.name}
-                    </Button>
-                  </CardContent>
+                    <h3 className="text-2xl font-semibold text-white mb-2">
+                      {category.name}
+                    </h3>
+                    <p className="text-white/90 text-sm line-clamp-2 mb-4">
+                      {category.description}
+                    </p>
+                    <div className="inline-flex items-center text-white text-sm font-medium gap-2">
+                      Explore
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
                 </Card>
               </Link>
             );
@@ -107,33 +127,30 @@ export function CategoriesSearch({ categories }: CategoriesSearchProps) {
 
           {/* Management Card - Only visible to moderators/admins */}
           <PermissionGate requireModerator>
-            <Link href="/admin/manage-sports">
-              <Card className="h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group flex flex-col">
-                <CardHeader className="text-center pb-4 flex-grow">
-                  <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 bg-blue-500">
-                    <Settings className="h-10 w-10 text-white" />
-                  </div>
-                  <CardTitle className="text-2xl mb-3">
-                    Manage Sports &amp; Disciplines
-                  </CardTitle>
-                  <CardDescription className="text-base text-pretty leading-relaxed">
-                    Add, edit, and organize movement disciplines
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-center pt-0 mt-auto">
-                  <div className="flex items-center justify-between mb-4">
-                    <Badge variant="secondary" className="text-sm">
+            <Link href="/admin/manage-sports" className="group">
+              <Card className="relative overflow-hidden h-72 flex flex-col justify-end border-2 hover:border-primary transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 opacity-80 group-hover:opacity-70 transition-opacity" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Settings className="h-16 w-16 text-white/60" />
+                </div>
+                <div className="relative z-10 p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <Badge variant="secondary" className="text-xs">
                       Admin Tools
                     </Badge>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <ArrowRight className="h-4 w-4 text-white/80 group-hover:translate-x-1 transition-transform" />
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors bg-transparent"
-                  >
-                    Manage Sports &amp; Disciplines
-                  </Button>
-                </CardContent>
+                  <h3 className="text-2xl font-semibold text-white mb-2">
+                    Manage Sports & Disciplines
+                  </h3>
+                  <p className="text-white/90 text-sm line-clamp-2 mb-4">
+                    Add, edit, and organize movement disciplines
+                  </p>
+                  <div className="inline-flex items-center text-white text-sm font-medium gap-2">
+                    Open Admin
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
               </Card>
             </Link>
           </PermissionGate>

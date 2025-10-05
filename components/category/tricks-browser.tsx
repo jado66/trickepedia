@@ -28,6 +28,9 @@ import {
   Funnel,
   FunnelX,
   Network,
+  Plus,
+  ChevronDown,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import type { Trick } from "@/types/trick";
@@ -63,6 +66,15 @@ type SortOrder = "asc" | "desc";
 type ViewMode = "grid" | "compact";
 
 const TRICKS_PER_PAGE = 24;
+
+// Difficulty filter options (range based)
+const DIFFICULTY_OPTIONS: Array<{ label: string; value: string }> = [
+  { label: "All", value: "all" },
+  { label: "Beginner 1-3", value: "1-3" },
+  { label: "Intermediate 4-6", value: "4-6" },
+  { label: "Advanced 7-8", value: "7-8" },
+  { label: "Expert 9-10", value: "9-10" },
+];
 
 export function TricksBrowser({
   tricks: serverTricks,
@@ -347,10 +359,10 @@ export function TricksBrowser({
   return (
     <div className="space-y-6">
       {/* User Progress Stats */}
-      <div className="bg-muted/30 rounded-lg p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full">
-            <div className="flex items-center gap-2">
+      <div className=" p-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4  md:block hidden">
+          <div className="flex flex-row sm:items-center gap-4 w-full">
+            <div className="flex items-center gap-2 ">
               <CheckCircle2 className="h-5 w-5 text-green-600" />
               <span className="text-sm font-medium">
                 Can Do: {user && userStats ? userStats.canDo : "0"}
@@ -364,7 +376,8 @@ export function TricksBrowser({
               </span>
             </div>
             {/* View Skill Tree Button */}
-            <div className="mt-2 sm:mt-0">
+
+            <div className="mt-2 sm:mt-0 ml-auto">
               <Link href={`/${categorySlug}/skill-tree`} passHref>
                 <Button
                   variant="outline"
@@ -377,70 +390,134 @@ export function TricksBrowser({
               </Link>
             </div>
           </div>
-          <div className="flex justify-start sm:justify-end w-full">
-            {user && userStats ? (
-              <Badge variant="secondary" className="text-sm">
-                {userStats.percentage}% Complete
-              </Badge>
-            ) : (
-              <Link href="/login">
-                <Badge
-                  variant="secondary"
-                  className="text-sm cursor-pointer hover:bg-secondary/80 transition-colors"
+        </div>
+        {/* Mobile view */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4  block md:hidden">
+          <div className="flex flex-row sm:items-center gap-4 w-full ">
+            <div className="flex items-center gap-2 rounded-lg border border-accent px-2 ">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              {user && userStats ? (
+                <span className="text-sm font-medium capitalize">
+                  {userStats?.canDo || "0"}/{serverTricks.length}{" "}
+                  {moveName + "s "}
+                  learned
+                </span>
+              ) : (
+                <span className="text-sm font-medium capitalize">
+                  Sign in to track your progress
+                </span>
+              )}
+            </div>
+
+            {/* View Skill Tree Button */}
+            <div className="mb-.5 ml-auto">
+              <Link href={`/${categorySlug}/skill-tree`} passHref>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap flex items-center gap-2"
                 >
-                  Sign in to track progress
-                </Badge>
+                  <Network className="h-4 w-4" />
+                  View Skill Tree
+                </Button>
               </Link>
-            )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Category Filter Chips */}
       {subcategories.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-medium text-muted-foreground">
-            Category Filters
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
-            {subcategories.map((subcategory) => {
-              const isActive = selectedSubcategory === subcategory.slug;
-              return (
-                <div key={subcategory.id} className="relative">
-                  <Button
-                    variant={"outline"}
-                    size="sm"
-                    onClick={() => handleSubcategoryFilter(subcategory.slug)}
-                    className={cn("w-full h-8 text-xs pr-16 cursor-pointer", {
-                      "bg-accent/50": isActive,
-                    })}
-                  >
-                    <span className="truncate">{subcategory.name}</span>
-                  </Button>
-                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Link href={`/${categorySlug}/${subcategory.slug}`}>
-                          <div
-                            className="h-6 w-6 p-0 hover:bg-white/20 rounded flex items-center justify-center cursor-pointer"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </div>
-                        </Link>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Go to {subcategory.name} page</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
+        <>
+          {/* Mobile Accordion */}
+          <div className="md:hidden">
+            <details className="group rounded-lg border bg-muted/30 open:bg-muted/30">
+              <summary className="flex items-center justify-between cursor-pointer list-none px-4 py-2 select-none">
+                <span className="text-sm font-medium text-muted-foreground capitalize">
+                  Browse by {moveName} Type
+                </span>
+                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180 text-muted-foreground" />
+              </summary>
+              <div className="px-4 pb-4">
+                <div className="grid grid-cols-2 gap-2">
+                  {subcategories.map((subcategory) => {
+                    const isActive = selectedSubcategory === subcategory.slug;
+                    return (
+                      <div key={subcategory.id} className="relative">
+                        <Button
+                          variant={"outline"}
+                          size="sm"
+                          onClick={() =>
+                            handleSubcategoryFilter(subcategory.slug)
+                          }
+                          className={cn(
+                            "w-full h-8 text-xs pr-10 cursor-pointer flex items-center",
+                            {
+                              "bg-accent/50": isActive,
+                            }
+                          )}
+                        >
+                          <span className="truncate flex-1 min-w-0 text-left">
+                            {subcategory.name}
+                          </span>
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            </details>
           </div>
-        </div>
-      )}
 
+          {/* Desktop / Larger screens (original layout) */}
+          <div className="space-y-3 hidden md:block">
+            <h3 className="text-sm font-medium text-muted-foreground capitalize">
+              Browse by {moveName} Type
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+              {subcategories.map((subcategory) => {
+                const isActive = selectedSubcategory === subcategory.slug;
+                return (
+                  <div key={subcategory.id} className="relative">
+                    <Button
+                      variant={"outline"}
+                      size="sm"
+                      onClick={() => handleSubcategoryFilter(subcategory.slug)}
+                      className={cn(
+                        "w-full h-8 text-xs pr-16 cursor-pointer flex items-center",
+                        {
+                          "bg-accent/50": isActive,
+                        }
+                      )}
+                    >
+                      <span className="truncate flex-1 min-w-0 text-left">
+                        {subcategory.name}
+                      </span>
+                    </Button>
+                    <div className="absolute right-1 hidden md:block top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link href={`/${categorySlug}/${subcategory.slug}`}>
+                            <div
+                              className="h-6 w-6 p-0 hover:bg-white/20 rounded flex items-center justify-center cursor-pointer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </div>
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Go to {subcategory.name} page</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
       {/* Search and Filter Controls */}
       <div className="space-y-4">
         {/* Main Search Bar */}
@@ -454,7 +531,7 @@ export function TricksBrowser({
               className="pl-10"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 hidden md:block">
             <div className="flex items-center gap-1 border rounded-md">
               <Button
                 variant={showFilters ? "default" : "ghost"}
@@ -490,76 +567,275 @@ export function TricksBrowser({
 
         {/* Advanced Filters */}
         {showFilters && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-muted/30 rounded-lg">
-            <Select
-              value={selectedDifficulty}
-              onValueChange={setSelectedDifficulty}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="All Difficulties" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Difficulties</SelectItem>
-                <SelectItem value="1-3">Beginner (1-3)</SelectItem>
-                <SelectItem value="4-6">Intermediate (4-6)</SelectItem>
-                <SelectItem value="7-8">Advanced (7-8)</SelectItem>
-                <SelectItem value="9-10">Expert (9-10)</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={sortBy}
-              onValueChange={(value: SortOption) => setSortBy(value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="difficulty">Sort by Difficulty</SelectItem>
-                <SelectItem value="alphabetical">Sort A-Z</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleSortOrder}
-                className="flex-1 bg-transparent"
-              >
-                {sortOrder === "asc" ? (
-                  <SortAsc className="h-4 w-4 mr-2" />
-                ) : (
-                  <SortDesc className="h-4 w-4 mr-2" />
+          <div className="p-4 bg-muted/40 rounded-lg border border-border/40 space-y-4 animate-in fade-in-50">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
+                Advanced Filters
+              </h4>
+              <div className="flex items-center gap-2">
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="h-7 px-2 text-xs"
+                  >
+                    Reset
+                  </Button>
                 )}
-                {sortOrder === "asc" ? "Ascending" : "Descending"}
-              </Button>
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  Clear
+              </div>
+            </div>
+
+            {/* Difficulty Segmented Control */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Difficulty
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {DIFFICULTY_OPTIONS.map((opt) => {
+                  const active = selectedDifficulty === opt.value;
+                  return (
+                    <Button
+                      key={opt.value}
+                      type="button"
+                      variant={active ? "default" : "outline"}
+                      size="sm"
+                      aria-pressed={active}
+                      onClick={() => setSelectedDifficulty(opt.value)}
+                      className={cn(
+                        "h-8 text-xs",
+                        !active &&
+                          "bg-background hover:bg-accent/30 transition-colors"
+                      )}
+                    >
+                      {opt.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Sorting Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Sort By
+                </label>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value: SortOption) => setSortBy(value)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="difficulty">Difficulty</SelectItem>
+                    <SelectItem value="alphabetical">A → Z</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Order
+                </label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSortOrder}
+                  className="w-full h-9 justify-start bg-background hover:bg-accent/40"
+                >
+                  {sortOrder === "asc" ? (
+                    <>
+                      <SortAsc className="h-4 w-4 mr-2" /> Ascending
+                    </>
+                  ) : (
+                    <>
+                      <SortDesc className="h-4 w-4 mr-2" /> Descending
+                    </>
+                  )}
                 </Button>
+              </div>
+              {user && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Progress
+                  </label>
+                  <Button
+                    variant={showUnlearnedOnly ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setShowUnlearnedOnly((p) => !p)}
+                    className="w-full h-9 justify-start"
+                  >
+                    {showUnlearnedOnly ? "Showing Unlearned" : "All Tricks"}
+                  </Button>
+                </div>
               )}
             </div>
+
+            {/* Active filter summary badges (inside panel for mobile) */}
+            {hasActiveFilters && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {searchTerm && (
+                  <Badge
+                    variant="secondary"
+                    className="flex items-center gap-1 pr-1"
+                  >
+                    Search: "{searchTerm}"
+                    <button
+                      aria-label="Clear search"
+                      className="ml-1 hover:text-destructive/80"
+                      onClick={() => setSearchTerm("")}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {selectedSubcategory !== "all" && (
+                  <Badge
+                    variant="secondary"
+                    className="flex items-center gap-1 pr-1"
+                  >
+                    Type:{" "}
+                    {subcategories.find((s) => s.slug === selectedSubcategory)
+                      ?.name || selectedSubcategory}
+                    <button
+                      aria-label="Clear subcategory filter"
+                      className="ml-1 hover:text-destructive/80"
+                      onClick={() => setSelectedSubcategory("all")}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {selectedDifficulty !== "all" && (
+                  <Badge
+                    variant="secondary"
+                    className="flex items-center gap-1 pr-1"
+                  >
+                    Difficulty:{" "}
+                    {DIFFICULTY_OPTIONS.find(
+                      (d) => d.value === selectedDifficulty
+                    )?.label || selectedDifficulty}
+                    <button
+                      aria-label="Clear difficulty filter"
+                      className="ml-1 hover:text-destructive/80"
+                      onClick={() => setSelectedDifficulty("all")}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {showUnlearnedOnly && (
+                  <Badge
+                    variant="secondary"
+                    className="flex items-center gap-1 pr-1"
+                  >
+                    Unlearned
+                    <button
+                      aria-label="Show all tricks"
+                      className="ml-1 hover:text-destructive/80"
+                      onClick={() => setShowUnlearnedOnly(false)}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
 
+      {/* Active filter badges (desktop outside panel for visibility) */}
+      {hasActiveFilters && !showFilters && (
+        <div className="flex flex-wrap gap-2 -mt-2">
+          {searchTerm && (
+            <Badge variant="secondary" className="flex items-center gap-1 pr-1">
+              Search: "{searchTerm}"
+              <button
+                aria-label="Clear search"
+                className="ml-1 hover:text-destructive/80"
+                onClick={() => setSearchTerm("")}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {selectedSubcategory !== "all" && (
+            <Badge variant="secondary" className="flex items-center gap-1 pr-1">
+              Type:{" "}
+              {subcategories.find((s) => s.slug === selectedSubcategory)
+                ?.name || selectedSubcategory}
+              <button
+                aria-label="Clear subcategory filter"
+                className="ml-1 hover:text-destructive/80"
+                onClick={() => setSelectedSubcategory("all")}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {selectedDifficulty !== "all" && (
+            <Badge variant="secondary" className="flex items-center gap-1 pr-1">
+              Difficulty:{" "}
+              {DIFFICULTY_OPTIONS.find((d) => d.value === selectedDifficulty)
+                ?.label || selectedDifficulty}
+              <button
+                aria-label="Clear difficulty filter"
+                className="ml-1 hover:text-destructive/80"
+                onClick={() => setSelectedDifficulty("all")}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {showUnlearnedOnly && (
+            <Badge variant="secondary" className="flex items-center gap-1 pr-1">
+              Unlearned
+              <button
+                aria-label="Show all tricks"
+                className="ml-1 hover:text-destructive/80"
+                onClick={() => setShowUnlearnedOnly(false)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="h-7 px-2 text-xs"
+          >
+            Clear All
+          </Button>
+        </div>
+      )}
+
       {/* Results Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold ">
+        <div className="flex items-center flex-wrap gap-2">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
             <span className=" capitalize">
               {filteredAndSortedTricks.length} {moveName}
               {filteredAndSortedTricks.length !== 1 ? "s" : ""}
             </span>
-
             {totalPages > 1 && (
               <span className="text-muted-foreground font-normal">
-                {" "}
                 (Page {currentPage} of {totalPages})
               </span>
             )}
           </h3>
+          <Link
+            href={`/${categorySlug}/add-trick`}
+            className="ml-auto md:hidden block"
+          >
+            <Button variant="default" size="sm" className="h-8 ">
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Trick
+            </Button>
+          </Link>
           {hasActiveFilters && (
             <Badge variant="outline" className="text-xs">
               Filtered
@@ -567,24 +843,18 @@ export function TricksBrowser({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link href={`/${categorySlug}/add-trick`}>
-            <Button variant="default" size="sm" className="h-8">
-              Add New Trick
-            </Button>
-          </Link>
-
-          {user && (
+        {user && (
+          <div className="flex items-center gap-2">
             <Button
               variant={showUnlearnedOnly ? "default" : "outline"}
               size="sm"
               onClick={() => setShowUnlearnedOnly((p) => !p)}
-              className="h-8"
+              className="h-8 hidden md:block"
             >
               {showUnlearnedOnly ? "Show All" : "Show Unlearned"}
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Tricks Grid */}
@@ -680,17 +950,20 @@ export function TricksBrowser({
               >
                 Next
               </Button>
+
+              <Link
+                href={`/${categorySlug}/add-trick`}
+                className="ml-10 hidden md:block"
+              >
+                <Button variant="default" size="sm" className="h-8 ">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add New Trick
+                </Button>
+              </Link>
             </div>
           )}
 
           {/* Always show Add New Trick at the bottom when there are tricks */}
-          <div className="flex justify-center pt-6">
-            <Link href={`/${categorySlug}/add-trick`}>
-              <Button variant="default" className="mx-2">
-                Add New Trick
-              </Button>
-            </Link>
-          </div>
         </>
       ) : (
         <div className="text-center py-12 bg-muted/30 rounded-lg">
@@ -700,7 +973,7 @@ export function TricksBrowser({
               : `No ${moveName}s found in ${categoryName}`}
           </p>
           <Link href={`/${categorySlug}/add-trick`}>
-            <Button variant="default" className="mx-2">
+            <Button variant="default" className="mx-2 md:hidden">
               Add New Trick
             </Button>
           </Link>
