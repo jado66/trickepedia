@@ -248,7 +248,7 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
             <span>FAQs</span>
           </Link>
 
-          {user && user?.xp >= 500 && (
+          {user && user?.xp && user.xp && >= 500 && (
             <ThemeToggle variant="nav" className="w-full justify-start" />
           )}
 
