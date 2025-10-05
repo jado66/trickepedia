@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { TrickWithLinkedPrerequisites } from "@/types/trick";
+import { renderMultilineDescription } from "@/lib/description-format";
 
 interface TrickHeaderProps {
   trick: TrickWithLinkedPrerequisites;
 }
-
 export function TrickHeader({ trick }: TrickHeaderProps) {
   return (
     <>
@@ -25,7 +25,9 @@ export function TrickHeader({ trick }: TrickHeaderProps) {
             {trick.name}
           </h1>
           <p className="text-xl text-muted-foreground text-pretty leading-relaxed">
-            {trick.description}
+            {renderMultilineDescription(trick?.description, {
+              fallback: "No description available.",
+            })}
           </p>
         </div>
       </div>

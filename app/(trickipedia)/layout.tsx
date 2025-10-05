@@ -1,5 +1,5 @@
 import { TrickipediaLayoutServer } from "./layout-server";
-import { TrickipediaFooter } from "@/components/trickipdedia-footer";
+import { TrickipediaFooter } from "@/components/trickipedia-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 
 import "../globals.css";

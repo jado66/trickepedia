@@ -24,6 +24,7 @@ export const iconMap = {
   wall: BrickWall,
   diamond: Diamond,
   waypoints: Waypoints,
+  fan: Fan,
   // Legacy support for old naming convention
   Zap,
   Target,
