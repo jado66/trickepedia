@@ -10,6 +10,7 @@ import {
   Instagram,
   Twitter,
   Github,
+  Bug,
 } from "lucide-react";
 
 export function TrickipediaFooter() {
@@ -113,6 +114,15 @@ export function TrickipediaFooter() {
                 >
                   <Shield className="h-3 w-3 mr-2" />
                   Community Guidelines
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/bug-report"
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center"
+                >
+                  <Bug className="h-3 w-3 mr-2" />
+                  Submit a Bug Report
                 </Link>
               </li>
               <li>

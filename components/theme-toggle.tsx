@@ -46,8 +46,12 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
         onClick={toggleTheme}
         aria-pressed={isDark}
         className={cn(
-          "w-full justify-start gap-2 h-auto py-2 text-base md:text-sm font-normal",
-          "hover:text-white",
+          // Mirror nav item styling
+          "flex w-full items-center gap-2 rounded-md text-sm font-medium text-left",
+          // Colors & interactive states
+          "text-sidebar-foreground hover:bg-sidebar-accent  hover:text-muted transition-colors",
+          // Accessibility focus styles (match button defaults but ensure visible)
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           className
         )}
       >
