@@ -164,7 +164,7 @@ export function TrickipediaFooter() {
               </h3>
               <div className="flex space-x-4">
                 <a
-                  href="https://discord.gg/TneHJWEZ"
+                  href="https://discord.gg/uE4MMhaPSz"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Discord"
