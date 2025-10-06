@@ -10,6 +10,13 @@ import {
   Diamond,
   Waypoints,
   Fan,
+  Medal,
+  Skull,
+  Flame,
+  RefreshCcwDot,
+  Bubbles,
+  Users,
+  Disc3,
 } from "lucide-react";
 
 export const iconMap = {
@@ -25,7 +32,14 @@ export const iconMap = {
   diamond: Diamond,
   waypoints: Waypoints,
   fan: Fan,
+  bubbles: Bubbles,
+  users: Users,
+  flame: Flame,
+  disc3: Disc3,
   // Legacy support for old naming convention
+  medal: Medal,
+  skull: Skull,
+
   Zap,
   Target,
   Dumbbell,

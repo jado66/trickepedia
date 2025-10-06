@@ -14,6 +14,8 @@ import {
   LogOut,
   Network,
   CircleCheck,
+  Heart,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 import { TrickipediaLogo } from "../trickipedia-logo";
@@ -34,6 +36,9 @@ import {
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { iconMap } from "./icon-map";
+import { generateReferralLink } from "@/lib/referral-utils";
+import { useCallback } from "react";
+import { toast } from "sonner";
 
 export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
   const router = useRouter();
@@ -87,6 +92,21 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
     [...expandedItems].find((id) => categories.some((c) => c.slug === id)) ||
     undefined;
 
+  const handleInvite = async () => {
+    try {
+      console.log("hello");
+      toast.success("Referral link copied!");
+      const link = user?.email
+        ? generateReferralLink(user.email)
+        : `${
+            typeof window !== "undefined" ? window.location.origin : ""
+          }/signup`;
+      await navigator.clipboard.writeText(link);
+    } catch (e) {
+      toast.error("Failed to copy invite link");
+    }
+  };
+
   return (
     <div className="block sm:hidden flex h-full flex-col">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-4">
@@ -106,7 +126,7 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
             className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent  hover:text-muted"
             onClick={onItemClick}
           >
-            <CircleCheck className="h-4 w-4" />
+            <Trophy className="h-4 w-4" />
             <span>Sports & Disciplines</span>
           </Link>
 
@@ -325,63 +345,68 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
             </Collapsible>
           )}
 
-          <Collapsible
-            open={expandedItems.has("account")}
-            onOpenChange={() => toggleExpanded("account")}
+          <button
+            type="button"
+            onClick={handleInvite}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-muted"
           >
-            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent  hover:text-muted">
-              <span className="text-left flex items-center gap-2">
-                <User className="h-4 w-4" /> Account
-              </span>
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 data-[state=open]:rotate-90" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pb-1 pt-1">
-              <div className="ml-4 space-y-0.5">
-                {user ? (
-                  <>
-                    <Link
-                      href="/profile"
-                      className="block rounded-md px-3 py-1.5 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent  hover:text-muted truncate"
-                      onClick={onItemClick}
-                    >
-                      <span className="flex items-center gap-2">
-                        <User className="h-3.5 w-3.5" /> {user.email}
-                      </span>
-                    </Link>
-                    <button
-                      onClick={handleSignOut}
-                      className="block w-full text-left rounded-md px-3 py-1.5 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent  hover:text-muted"
-                    >
-                      <span className="flex items-center gap-2">
-                        <LogOut className="h-3.5 w-3.5" /> Sign Out
-                      </span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/login"
-                      className="block rounded-md px-3 py-1.5 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent  hover:text-muted"
-                      onClick={onItemClick}
-                    >
-                      <span className="flex items-center gap-2">
-                        <LogIn className="h-3.5 w-3.5" /> Sign In
-                      </span>
-                    </Link>
-                    <Link
-                      href="/signup"
-                      className="block rounded-md px-3 py-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                      onClick={onItemClick}
-                    >
-                      <span className="flex items-center gap-2">
-                        <UserPlus className="h-3.5 w-3.5" /> Join Now
-                      </span>
-                    </Link>
-                  </>
-                )}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+            <Heart className="h-4 w-4" />
+            <span>Invite a Friend</span>
+          </button>
+
+          {user ? (
+            <Collapsible
+              open={expandedItems.has("account")}
+              onOpenChange={() => toggleExpanded("account")}
+            >
+              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent  hover:text-muted">
+                <span className="text-left flex items-center gap-2">
+                  <User className="h-4 w-4" /> Account
+                </span>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 data-[state=open]:rotate-90" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pb-1 pt-1">
+                <div className="ml-4 space-y-0.5">
+                  <Link
+                    href="/profile"
+                    className="block rounded-md px-3 py-1.5 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent  hover:text-muted truncate"
+                    onClick={onItemClick}
+                  >
+                    <span className="flex items-center gap-2">
+                      <User className="h-3.5 w-3.5" /> {user.email}
+                    </span>
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="block w-full text-left rounded-md px-3 py-1.5 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent  hover:text-muted"
+                  >
+                    <span className="flex items-center gap-2">
+                      <LogOut className="h-3.5 w-3.5" /> Sign Out
+                    </span>
+                  </button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent  hover:text-muted"
+                onClick={onItemClick}
+              >
+                <LogIn className="h-4 w-4" />
+                <span>Sign In</span>
+              </Link>
+              <Link
+                href="/signup"
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                onClick={onItemClick}
+              >
+                <UserPlus className="h-4 w-4" />
+                <span>Sign Up</span>
+              </Link>
+            </>
+          )}
         </nav>
       </ScrollArea>
     </div>

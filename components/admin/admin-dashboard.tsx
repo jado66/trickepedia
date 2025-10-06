@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/utils/supabase/client";
 import {
   Card,
@@ -9,17 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Users } from "lucide-react";
+import { UserGrowthChart, UserGrowthPoint } from "./user-growth-chart";
+import { useToast } from "@/hooks/use-toast";
+import { UsersTable, UserRow, UserRole } from "./users-table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,51 +22,44 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Search,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  Users,
-  Filter,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-type UserRole = "user" | "business" | "administrator";
-
-interface User {
-  id: string;
-  email: string;
-  role: UserRole;
-  first_name: string | null;
-  last_name: string | null;
-  username: string | null;
-  profile_image_url: string | null;
-  created_at: string;
-  phone: string | null;
-}
-
-const ITEMS_PER_PAGE = 10;
+// Default page size; now user-adjustable in the table UI
+const DEFAULT_ITEMS_PER_PAGE = 10;
 
 export function AdminDashboard() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<UserRole | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_ITEMS_PER_PAGE);
   const [totalUsers, setTotalUsers] = useState(0);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  const [updatingXP, setUpdatingXP] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [sortingState, setSortingState] = useState<{
+    column: string;
+    direction: "asc" | "desc" | null;
+  }>({ column: "created_at", direction: "desc" });
+  const [growthData, setGrowthData] = useState<UserGrowthPoint[]>([]);
+  const [loadingGrowth, setLoadingGrowth] = useState<boolean>(true);
   const { toast } = useToast();
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from("users")
-        .select("*", { count: "exact" })
-        .order("created_at", { ascending: false });
+      let query = supabase.from("users").select("*", { count: "exact" });
+
+      // Sorting (server-side)
+      if (sortingState.column && sortingState.direction) {
+        query = query.order(sortingState.column, {
+          ascending: sortingState.direction === "asc",
+        });
+      } else {
+        query = query.order("created_at", { ascending: false });
+      }
 
       // Apply search filter
       if (searchTerm) {
@@ -88,8 +74,8 @@ export function AdminDashboard() {
       }
 
       // Apply pagination
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
       query = query.range(from, to);
 
       const { data, error, count } = await query;
@@ -107,6 +93,32 @@ export function AdminDashboard() {
       });
     } finally {
       setLoading(false);
+    }
+  }, [searchTerm, roleFilter, currentPage, sortingState, pageSize]);
+  const updateUserXP = async (userId: string, newXP: number) => {
+    setUpdatingXP(userId);
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({ xp: newXP })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, xp: newXP } : u))
+      );
+
+      toast({ title: "XP Updated", description: `Set XP to ${newXP}` });
+    } catch (error) {
+      console.error("Error updating user XP", error);
+      toast({
+        title: "Error",
+        description: "Failed to update XP",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingXP(null);
     }
   };
 
@@ -189,36 +201,93 @@ export function AdminDashboard() {
 
   useEffect(() => {
     fetchUsers();
-  }, [searchTerm, roleFilter, currentPage]);
+  }, [fetchUsers]);
 
-  const totalPages = Math.ceil(totalUsers / ITEMS_PER_PAGE);
+  // Fetch all user creation timestamps (paged) once for growth chart
+  useEffect(() => {
+    let isCancelled = false;
+    async function fetchGrowth() {
+      setLoadingGrowth(true);
+      try {
+        // First request just to get count
+        const pageSize = 1000;
+        const initial = await supabase
+          .from("users")
+          .select("id, created_at", { count: "exact" })
+          .order("created_at", { ascending: true })
+          .range(0, pageSize - 1);
 
-  const getRoleBadgeVariant = (role: UserRole) => {
-    switch (role) {
-      case "administrator":
-        return "destructive";
-      case "business":
-        return "default";
-      case "user":
-        return "secondary";
-      default:
-        return "secondary";
+        if (initial.error) throw initial.error;
+        const all: { id: string; created_at: string }[] = initial.data || [];
+        const total = initial.count || all.length;
+
+        // If more than first page, loop
+        for (let offset = pageSize; offset < total; offset += pageSize) {
+          const { data, error } = await supabase
+            .from("users")
+            .select("id, created_at")
+            .order("created_at", { ascending: true })
+            .range(offset, offset + pageSize - 1);
+          if (error) throw error;
+          if (data) all.push(...data);
+        }
+
+        if (isCancelled) return;
+
+        // Aggregate by day
+        const byDay: Record<string, number> = {};
+        all.forEach((u) => {
+          if (!u.created_at) return;
+          const day = new Date(u.created_at).toISOString().split("T")[0];
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - ensure numeric increment
+          byDay[day] = (byDay[day] || 0) + 1;
+        });
+        const sortedDays = Object.keys(byDay).sort();
+        let cumulative = 0;
+        const points: UserGrowthPoint[] = sortedDays.map((day) => {
+          const daily = byDay[day];
+          cumulative += daily;
+          return { date: day, daily, cumulative };
+        });
+        setGrowthData(points);
+      } catch (e) {
+        console.error("Error fetching user growth data", e);
+      } finally {
+        if (!isCancelled) setLoadingGrowth(false);
+      }
     }
-  };
+    fetchGrowth();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
-  const getInitials = (
-    firstName: string | null,
-    lastName: string | null,
-    email: string
-  ) => {
-    if (firstName && lastName) {
-      return `${firstName[0]}${lastName[0]}`.toUpperCase();
+  const totalPages = Math.ceil(totalUsers / pageSize) || 1;
+
+  // Adapter to pass to UsersTable (1-based to 0-based conversion done there if needed)
+  const handleFetchPage = ({
+    pageIndex,
+    pageSize: incomingPageSize,
+    sorting,
+  }: any) => {
+    // Update state that triggers effect
+    setCurrentPage(pageIndex + 1);
+    if (incomingPageSize && incomingPageSize !== pageSize) {
+      setPageSize(incomingPageSize);
+      setCurrentPage(1); // reset to first page when size changes
     }
-    return email[0].toUpperCase();
+    if (sorting && sorting[0]) {
+      const { id, desc } = sorting[0];
+      setSortingState({ column: id, direction: desc ? "desc" : "asc" });
+    } else if (sorting?.length === 0) {
+      setSortingState({ column: "created_at", direction: "desc" });
+    }
+    // search + role already managed via controlled states
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background lg:p-6 p-2">
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -235,197 +304,70 @@ export function AdminDashboard() {
             {totalUsers} total users
           </div>
         </div>
-
-        {/* Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Filters</CardTitle>
-            <CardDescription>Search and filter users</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search by email, name, or username..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select
-                  value={roleFilter}
-                  onValueChange={(value: UserRole | "all") =>
-                    setRoleFilter(value)
-                  }
-                >
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Filter by role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="business">Business</SelectItem>
-                    <SelectItem value="administrator">Administrator</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Users Table */}
+        {/* User Growth Chart */}
+        <UserGrowthChart data={growthData} isLoading={loadingGrowth} />
         <Card>
           <CardHeader>
             <CardTitle>Users</CardTitle>
             <CardDescription>
-              Showing {users.length} of {totalUsers} users
+              Enhanced management table with sorting, column visibility &
+              actions
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-muted-foreground">Loading users...</div>
-              </div>
-            ) : users.length === 0 ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-muted-foreground">No users found</div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {users.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
-                  >
-                    <div className="flex items-center gap-4">
-                      <Avatar>
-                        <AvatarImage
-                          src={user.profile_image_url || undefined}
-                        />
-                        <AvatarFallback>
-                          {getInitials(
-                            user.first_name,
-                            user.last_name,
-                            user.email
-                          )}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-foreground">
-                            {user.first_name && user.last_name
-                              ? `${user.first_name} ${user.last_name}`
-                              : user.username || "No name"}
-                          </p>
-                          <Badge variant={getRoleBadgeVariant(user.role)}>
-                            {user.role}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {user.email}
-                        </p>
-                        {user.phone && (
-                          <p className="text-sm text-muted-foreground">
-                            {user.phone}
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          Joined{" "}
-                          {new Date(user.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={user.role}
-                        onValueChange={(value: UserRole) =>
-                          updateUserRole(user.id, value)
-                        }
-                        disabled={updatingRole === user.id}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="business">Business</SelectItem>
-                          <SelectItem value="administrator">
-                            Administrator
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive hover:text-destructive bg-transparent"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete User</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this user? This
-                              action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteUser(user.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <UsersTable
+              data={users}
+              pageCount={totalPages}
+              totalUsers={totalUsers}
+              isLoading={loading}
+              onDelete={(id) => setPendingDeleteId(id)}
+              onRoleChange={updateUserRole}
+              onXPChange={updateUserXP}
+              updatingXPId={updatingXP}
+              fetchPage={handleFetchPage}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+              roleFilter={roleFilter}
+              setRoleFilter={setRoleFilter}
+              globalFilter={searchTerm}
+              setGlobalFilter={setSearchTerm}
+              updatingRoleId={updatingRole}
+            />
           </CardContent>
         </Card>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  Page {currentPage} of {totalPages}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <AlertDialog
+          open={!!pendingDeleteId}
+          onOpenChange={(open) => !open && setPendingDeleteId(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete User</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this user? This action cannot be
+                undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingDeleteId(null)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (pendingDeleteId) deleteUser(pendingDeleteId);
+                  setPendingDeleteId(null);
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

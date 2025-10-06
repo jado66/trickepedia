@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useUser } from "@/contexts/user-provider";
+import { Heart, LogOut, User } from "lucide-react";
 
 interface UserNavProps {
   user: any;
@@ -58,7 +59,7 @@ export function UserNav({ user }: UserNavProps) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => router.push("/profile")}>
-          Profile
+          <User className="mr-2 h-4 w-4" /> Profile
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => {
@@ -71,14 +72,17 @@ export function UserNav({ user }: UserNavProps) {
             );
           }}
         >
-          Invite Friends
+          <Heart className="mr-2 h-4 w-4" /> Invite a Friend
         </DropdownMenuItem>
         {/* <DropdownMenuItem onClick={() => router.push("/dashboard")}>
           Dashboard
         </DropdownMenuItem> */}
 
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleSignOut}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
