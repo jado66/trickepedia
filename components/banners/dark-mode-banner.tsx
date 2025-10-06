@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Moon, Sparkles } from "lucide-react";
 import { useUser } from "@/contexts/user-provider";
@@ -12,7 +12,9 @@ export function DarkModeUnlockBanner() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const { user } = useUser();
   const { setTheme, theme } = useTheme();
-  const [originalTheme, setOriginalTheme] = useState<string | undefined>();
+  // Keep original theme in a ref so we can restore even if component unmounts early
+  const originalThemeRef = useRef<string | undefined>(null);
+  const previewTimeoutRef = useRef<number | null>(null);
 
   // Check if user has unlocked dark mode (500+ XP)
   const hasUnlockedDarkMode = (user?.xp || 0) >= 500;
@@ -32,16 +34,34 @@ export function DarkModeUnlockBanner() {
     toast.success("Referral link copied!");
   };
 
+  const endPreview = () => {
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+      previewTimeoutRef.current = null;
+    }
+    if (isDemoMode) {
+      setTheme(originalThemeRef.current || "trickipedia");
+      setIsDemoMode(false);
+      originalThemeRef.current = undefined;
+    }
+  };
+
   const handleDemoClick = () => {
-    const prevTheme = theme; // capture current theme to avoid stale state in timeout
-    setOriginalTheme(prevTheme);
+    if (isDemoMode) return; // guard against double-clicks
+    originalThemeRef.current = theme; // capture current theme
     setIsDemoMode(true);
     setTheme("dark");
-    setTimeout(() => {
-      setTheme(prevTheme || "trickipedia");
-      setIsDemoMode(false);
+    previewTimeoutRef.current = window.setTimeout(() => {
+      endPreview();
     }, 3000);
   };
+
+  // If the banner unmounts while preview is active (navigation / dismiss), restore immediately
+  useEffect(() => {
+    return () => {
+      endPreview();
+    };
+  }, []);
 
   return (
     <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border-b border-indigo-500/20 dark:from-indigo-500/5 dark:via-purple-500/5 dark:to-pink-500/5 dark:border-indigo-500/30">

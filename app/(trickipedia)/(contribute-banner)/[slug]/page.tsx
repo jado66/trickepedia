@@ -20,6 +20,7 @@ import { TricksBrowser } from "@/components/category/tricks-browser";
 import { iconMap } from "@/components/side-nav";
 import { getCategoryImage } from "@/components/category/category-images";
 import NotFoundComponent from "@/components/not-found";
+import { Button } from "@/components/ui/button";
 
 // Allow on-demand rendering so hidden/unlisted categories that are not part of any static paths still resolve.
 export const dynamic = "force-dynamic";
@@ -256,10 +257,20 @@ export default async function CategoryPage({ params }: PageProps) {
             />
           ) : (
             <div className="text-center py-12 bg-muted/30 rounded-lg">
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground mb-8">
                 No {category.move_name + "s"} have been added to {category.name}{" "}
                 yet.
               </p>
+              {/* add trick */}
+              <Link
+                href={`/${category.slug}/add-trick`}
+                className="mt-4 ml-auto "
+              >
+                <Button variant="default" size="lg" className="h-8 capitalize">
+                  <Icons.Plus className="mr-2 h-4 w-4 " />
+                  Add First {category.move_name || "Trick"}
+                </Button>
+              </Link>
             </div>
           )}
         </div>
