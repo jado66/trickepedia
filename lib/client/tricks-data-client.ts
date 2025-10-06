@@ -228,6 +228,113 @@ export async function createTrick(
   return newTrick;
 }
 
+export async function getTricks(
+  supabaseClient,
+  filters?: {
+    category?: string;
+    subcategory?: string;
+    difficulty?: number;
+    search?: string;
+    inventor_user_id?: string;
+    inventor_name?: string;
+    limit?: number;
+    offset?: number;
+    sortBy?:
+      | "difficulty_level"
+      | "name"
+      | "updated_at"
+      | "created_at"
+      | "view_count";
+
+    sortOrder?: "asc" | "desc";
+  }
+): Promise<{ tricks: Trick[]; total: number }> {
+  // IMPORTANT: do NOT await here; we need the PostgrestFilterBuilder to apply dynamic filters
+  let query = supabaseClient
+    .from("tricks")
+    .select(
+      `
+      *,
+      subcategory:subcategories!inner(
+        name,
+        slug,
+        master_category:master_categories!inner(name, slug, color)
+      ),
+      inventor:users!tricks_inventor_user_id_fkey(first_name, last_name, username, profile_image_url)
+    `,
+      { count: "exact" }
+    )
+    .eq("is_published", true);
+
+  // Apply category filter using nested filtering
+  if (filters?.category) {
+    query = query.eq("subcategories.master_categories.slug", filters.category);
+  }
+
+  // Apply subcategory filter
+  if (filters?.subcategory) {
+    query = query.eq("subcategories.slug", filters.subcategory);
+  }
+
+  if (filters?.difficulty) {
+    query = query.eq("difficulty_level", filters.difficulty);
+  }
+
+  if (filters?.search) {
+    const raw = filters.search.trim();
+    if (raw.length) {
+      // Use PostgREST OR syntax with * wildcards (PostgREST translates * -> % for like/ilike patterns)
+      // Reason for change: previous implementation used % inside .or() which PostgREST does not parse in the filter DSL.
+      // This caused the OR filter to be ignored and all rows returned.
+      const sanitized = raw.replace(/,/g, " "); // commas break OR clause parsing
+      // Build OR clause across multiple text fields (remove description if that column does not exist in your schema)
+      const orClause = `name.ilike.*${sanitized}*,slug.ilike.*${sanitized}*,description.ilike.*${sanitized}*`;
+      // Debug log (client-side) to verify clause used
+      if (typeof window !== "undefined") {
+        console.debug("[getTricks] Applying search OR clause:", orClause);
+      }
+      query = query.or(orClause);
+    }
+  }
+
+  // Filter by inventor
+  if (filters?.inventor_user_id) {
+    query = query.eq("inventor_user_id", filters.inventor_user_id);
+  }
+
+  if (filters?.inventor_name) {
+    query = query.eq("inventor_name", filters.inventor_name);
+  }
+
+  // Apply pagination
+  if (filters?.offset) {
+    query = query.range(
+      filters.offset,
+      filters.offset + (filters?.limit || 20) - 1
+    );
+  } else if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+
+  // Apply sorting
+  const sortBy = filters?.sortBy || "difficulty_level";
+  const sortOrder = filters?.sortOrder || "asc";
+
+  query = query.order(sortBy, { ascending: sortOrder === "asc" });
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error("Error fetching tricks:", error);
+    throw new Error("Failed to fetch tricks");
+  }
+
+  return {
+    tricks: data || [],
+    total: count || 0,
+  };
+}
+
 export async function getAllTricks(supabaseClient) {
   // Example with fetch (assume API endpoint)
 

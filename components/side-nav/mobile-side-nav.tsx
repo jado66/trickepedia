@@ -248,7 +248,7 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
             <span>FAQs</span>
           </Link>
 
-          {user && user?.xp && user.xp && >= 500 && (
+          {user && user?.xp && user.xp >= 500 && (
             <ThemeToggle variant="nav" className="w-full justify-start" />
           )}
 
@@ -310,6 +310,15 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
                     onClick={onItemClick}
                   >
                     Manage Users
+                  </Link>
+                </div>
+                <div className="ml-4 space-y-0.5">
+                  <Link
+                    href="/admin/bugs"
+                    className="block rounded-md px-3 py-1.5 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-muted"
+                    onClick={onItemClick}
+                  >
+                    Bugs
                   </Link>
                 </div>
               </CollapsibleContent>

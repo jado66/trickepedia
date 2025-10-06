@@ -301,6 +301,15 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
                       Manage Users
                     </Link>
                   </div>
+                  <div className="ml-4 space-y-0.5">
+                    <Link
+                      href="/admin/bugs"
+                      className="block rounded-md px-3 py-1.5 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-muted"
+                      onClick={onItemClick}
+                    >
+                      Bugs
+                    </Link>
+                  </div>
                 </CollapsibleContent>
               </Collapsible>
             )}

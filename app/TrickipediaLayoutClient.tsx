@@ -24,7 +24,13 @@ export function TrickipediaLayoutClient({
 
   return (
     <NavigationProvider initialData={initialNavigationData}>
-      <TrickipediaHeader onMobileMenuClick={() => setMobileSidebarOpen(true)} />
+      <TrickipediaHeader
+        onMobileMenuClick={() => setMobileSidebarOpen(true)}
+        categories={initialNavigationData.map((cat) => ({
+          name: cat.name,
+          slug: cat.slug,
+        }))}
+      />
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <SidebarProvider defaultOpen={true}>

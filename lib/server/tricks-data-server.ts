@@ -96,7 +96,6 @@ export async function getTricks(filters?: {
     total: count || 0,
   };
 }
-
 // Get trick by slug
 export async function getTrickBySlug(
   slug: string,
