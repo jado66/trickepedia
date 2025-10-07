@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode, useMemo } from "react";
-import { useUser } from "./user-provider";
 import type {
   NavigationCategory,
   NavigationSubcategory,
@@ -29,22 +28,10 @@ export function NavigationProvider({
   children: ReactNode;
   initialData?: NavigationCategory[];
 }) {
-  const { user: publicUser } = useUser();
-  // Filter categories based on user's selected sports
-  const categories = useMemo(() => {
-    if (
-      !publicUser?.users_sports_ids ||
-      publicUser.users_sports_ids.length === 0
-    ) {
-      // If user has no sports selected, show all categories
-      return initialData;
-    }
-
-    // Filter to only show categories user has selected
-    return initialData.filter((category) =>
-      publicUser.users_sports_ids!.includes(category.id)
-    );
-  }, [initialData, publicUser?.users_sports_ids]);
+  // Expose all categories; per-user selection filtering is now handled in the side nav components.
+  // This allows us to still show unselected categories (with badges / gating) and selectively
+  // surface hidden/unlisted ones if the user has them selected without losing the full list.
+  const categories = useMemo(() => initialData, [initialData]);
 
   const [isLoading] = useState(false);
   const [error] = useState<string | null>(null);

@@ -3,8 +3,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, X, ArrowRight } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Heart, X, ArrowRight, Plus } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { useWishlist } from "@/contexts/wishlist-context";
+import { TrickSearch } from "@/components/trick-search";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
+// Note: We intentionally do NOT filter out mastered tricks here; filtering happens in TrickSearch.
 
 export interface UserProgress {
   userId: string;
@@ -192,63 +205,219 @@ export const mockUserProgress: UserProgress = {
 };
 
 export function Wishlist() {
-  const [userProgress, setUserProgress] = useState(mockUserProgress);
+  const { items, loading, add, remove, removing, adding, refresh, lastAddedId, clearLastAdded } = useWishlist() as any;
+  const [wishlistTricks, setWishlistTricks] = useState<any[]>([]);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [selectedTricks, setSelectedTricks] = useState<Set<string>>(new Set());
+  const [addingTricks, setAddingTricks] = useState(false);
+  const { toast } = useToast();
+  const router = useRouter();
+  const lastAddedRef = useRef<HTMLDivElement | null>(null);
 
-  const wishlistTricks = useMemo(
-    () =>
-      userProgress.wishlist
-        .map((id) => mockTricks.find((trick) => trick.id === id))
-        .filter(Boolean) as any[],
-    [userProgress.wishlist]
-  );
+  // Sync local slice for top-5 view
+  useEffect(() => {
+    setWishlistTricks(items);
+  }, [items]);
 
+  // Scroll newly added into view & highlight briefly
+  useEffect(() => {
+    if (lastAddedId && lastAddedRef.current) {
+      lastAddedRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      const el = lastAddedRef.current;
+      el.classList.add("ring", "ring-primary/60", "ring-offset-2");
+      const timeout = setTimeout(() => {
+        el.classList.remove("ring", "ring-primary/60", "ring-offset-2");
+        clearLastAdded();
+      }, 1800);
+      return () => clearTimeout(timeout);
+    }
+  }, [lastAddedId, clearLastAdded]);
+
+  const handleRemoveFromWishlist = (trickId: string) => remove(trickId);
+
+  const handleViewTrick = (trick: any) => {
+    const categorySlug = trick.subcategory?.master_category?.slug;
+    const subcategorySlug = trick.subcategory?.slug;
+    if (categorySlug && subcategorySlug && trick.slug) {
+      router.push(`/${categorySlug}/${subcategorySlug}/${trick.slug}`);
+    }
+  };
+
+  const handleToggleTrick = (trickId: string) => {
+    setSelectedTricks((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(trickId)) {
+        newSet.delete(trickId);
+      } else {
+        newSet.add(trickId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleConfirmAddToWishlist = async () => {
+    if (selectedTricks.size === 0) return;
+    setAddingTricks(true);
+    try {
+      await Promise.all(Array.from(selectedTricks).map((id) => add(id)));
+      toast({
+        title: "Added to wishlist",
+        description: `${selectedTricks.size} trick${
+          selectedTricks.size > 1 ? "s" : ""} added to your wishlist`,
+      });
+      setSelectedTricks(new Set());
+      setAddDialogOpen(false);
+    } finally {
+      setAddingTricks(false);
+    }
+  };
+
+  // Show the wishlist exactly as stored (mastered tricks may still appear until backend removes them)
   const displayTricks = wishlistTricks.slice(0, 5);
   const hasMore = wishlistTricks.length > 5;
 
   return (
     <Card className="relative overflow-hidden">
       <CardHeader>
-        <CardTitle className="text-xl font-bold flex items-center gap-2">
-          <Heart className="w-5 h-5 text-red-500" />
-          Goal Tricks
-        </CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">
-          Track the tricks you want to master next. When you complete a trick,
-          we&apos;ll remove it automatically.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
+              <Heart className="w-5 h-5 text-red-500" />
+              Goal Tricks
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Track the tricks you want to master next. When you complete a
+              trick, we&apos;ll remove it automatically.
+            </p>
+          </div>
+          <Dialog
+            open={addDialogOpen}
+            onOpenChange={(open) => {
+              setAddDialogOpen(open);
+              if (!open) {
+                setSelectedTricks(new Set());
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline">
+                <Plus className="h-4 w-4 mr-1" />
+                Add Trick
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[650px] flex flex-col max-h-[90vh] overflow-visible">
+              <DialogHeader className="shrink-0">
+                <DialogTitle>Add Tricks to Wishlist</DialogTitle>
+                <DialogDescription>
+                  Search for tricks and select multiple to add them to your
+                  wishlist
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 flex-1 min-h-[400px] overflow-visible relative">
+                <TrickSearch
+                  mode="select"
+                  variant="default"
+                  selectedTricks={selectedTricks}
+                  onToggleTrick={handleToggleTrick}
+                />
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t shrink-0 bg-background">
+                <div className="text-sm text-muted-foreground">
+                  {selectedTricks.size === 0 ? (
+                    "No tricks selected"
+                  ) : (
+                    <span className="font-medium text-foreground">
+                      {selectedTricks.size} trick
+                      {selectedTricks.size > 1 ? "s" : ""} selected
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setAddDialogOpen(false)}
+                    disabled={addingTricks}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConfirmAddToWishlist}
+                    disabled={selectedTricks.size === 0 || addingTricks}
+                  >
+                    {addingTricks ? (
+                      <>
+                        <div className="animate-spin h-4 w-4 mr-2 rounded-full border-[2px] border-white/30 border-t-white" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add{" "}
+                        {selectedTricks.size > 0
+                          ? `(${selectedTricks.size})`
+                          : ""}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
-        {displayTricks.length > 0 ? (
+        {loading ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <div className="animate-spin h-8 w-8 mx-auto mb-3 rounded-full border-[3px] border-muted-foreground/30 border-t-muted-foreground" />
+            <p>Loading wishlist...</p>
+          </div>
+        ) : displayTricks.length > 0 ? (
           <div className="space-y-3">
-            {displayTricks.map((trick) => (
+            {displayTricks.map((trick) => {
+              const ref = trick.id === lastAddedId ? lastAddedRef : undefined;
+              return (
               <div
                 key={trick.id}
-                className="flex items-center justify-between p-3 border rounded-lg " //hover:bg-muted/50 transition-colors
+                ref={ref as any}
+                className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
               >
-                <div className="space-y-1">
+                <div className="space-y-1 flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-medium">{trick.name}</h3>
-                    <Badge variant="outline" className="capitalize text-xs">
-                      {trick.sport}
-                    </Badge>
+                    <h3 className="font-medium truncate">{trick.name}</h3>
+                    {trick.subcategory?.master_category?.name && (
+                      <Badge
+                        variant="outline"
+                        className="capitalize text-xs shrink-0"
+                      >
+                        {trick.subcategory.master_category.name}
+                      </Badge>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" disabled>
+                <div className="flex items-center gap-2 ml-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleViewTrick(trick)}
+                  >
                     View <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    disabled
-                    // onClick={() => onRemoveFromWishlist(trick.id)}
+                    disabled={removing[trick.id]}
+                    onClick={() => handleRemoveFromWishlist(trick.id)}
                     className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
                   >
-                    <X className="w-4 h-4" />
+                    {removing[trick.id] ? (
+                      <div className="animate-spin h-4 w-4 rounded-full border-[2px] border-red-500/30 border-t-red-500" />
+                    ) : (
+                      <X className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               </div>
-            ))}
+            )})}
             {hasMore && (
               <div className="pt-2 border-t">
                 <Button variant="outline" className="w-full bg-transparent">
@@ -260,26 +429,16 @@ export function Wishlist() {
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             <Heart className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
-            <p>Add tricks to your wishlist to track your goals!</p>
+            <p className="mb-4">
+              Add tricks to your wishlist to track your goals!
+            </p>
+            <Button variant="outline" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Your First Trick
+            </Button>
           </div>
         )}
       </CardContent>
-      {/* Centered Coming Soon overlay with a subtle frosted (blurred) panel behind text - no border or shadow */}
-      <div className="absolute inset-0 z-[5] pointer-events-none flex items-center justify-center p-4">
-        <div className="relative animate-in fade-in duration-500 pointer-events-none">
-          {/* Frosted translucent gradient panel (so text stays readable but underlying content peeks through) */}
-          <div className="absolute inset-0 rounded-2xl backdrop-blur-lg backdrop-saturate-150 bg-gradient-to-br from-background/55 via-background/25 to-background/10 dark:from-neutral-900/70 dark:via-neutral-900/45 dark:to-neutral-900/25" />
-          <div className="relative flex flex-col items-center gap-3 text-center px-6 py-5">
-            <span className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold tracking-wide bg-black/10 dark:bg-white/10 backdrop-blur-sm">
-              <Heart className="w-4 h-4 text-red-500" /> Coming Soon
-            </span>
-            <p className="text-xs md:text-sm max-w-xs text-muted-foreground leading-snug">
-              Track your dream tricks and build your progression path. Coming
-              very soon!
-            </p>
-          </div>
-        </div>
-      </div>
     </Card>
   );
 }

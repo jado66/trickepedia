@@ -2,7 +2,7 @@
 
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { Check, CheckCircle2 } from "lucide-react";
 import { MasterCategory } from "../skill-tree.types";
 import { iconMap } from "../side-nav/icon-map";
@@ -14,7 +14,13 @@ interface SportsSelectionProps {
   categories: CategoryWithStatus[];
   userSportsIds: string[];
   onToggleSport: (categoryId: string) => Promise<void> | void;
-  onFinish: () => void;
+  /**
+   * Called when the user presses Continue or Back.
+   * Receives a boolean indicating whether there are unsaved changes (true if selection differs from initial snapshot).
+   * Parent components that persist data can skip saving when `hasChanges` is false.
+   */
+  onFinish: (hasChanges?: boolean) => void;
+  /** External loading state (e.g. parent save in progress) */
   loading?: boolean;
 }
 
@@ -36,10 +42,28 @@ export function SportsSelection({
   userSportsIds,
   onToggleSport,
   onFinish,
+  loading,
 }: SportsSelectionProps) {
   const [showHidden, setShowHidden] = useState(false);
+  // Snapshot of the initial selection to determine if there are unsaved changes
+  const initialSelectionRef = useRef<Set<string> | null>(null);
+  if (initialSelectionRef.current === null) {
+    initialSelectionRef.current = new Set(userSportsIds);
+  }
+
+  const initialIds = initialSelectionRef.current;
   const allSelected =
     categories.length > 0 && userSportsIds.length === categories.length;
+
+  // Determine if current selection differs from initial snapshot
+  const hasChanges = useMemo(() => {
+    if (!initialIds) return false;
+    if (initialIds.size !== userSportsIds.length) return true;
+    // If any id differs
+    for (const id of userSportsIds) if (!initialIds.has(id)) return true;
+    return false;
+  }, [userSportsIds, initialIds]);
+  const saving = !!loading;
 
   const handleSelectAll = () => {
     if (allSelected) {
@@ -54,18 +78,31 @@ export function SportsSelection({
     }
   };
 
-  const visibleCategories = useMemo(
-    () =>
-      showHidden
-        ? categories
-        : categories.filter((c) =>
-            // Prefer explicit is_active if present, else infer from status
-            (c as any).is_active !== undefined
-              ? (c as any).is_active
-              : c.status !== "hidden"
-          ),
-    [categories, showHidden]
+  const handleToggleSport = useCallback(
+    (id: string) => {
+      if (saving) return;
+      onToggleSport(id);
+    },
+    [onToggleSport, saving]
   );
+
+  const handleFinish = useCallback(() => {
+    // Pass hasChanges so parent can decide to persist or simply exit when false.
+    onFinish(hasChanges);
+  }, [onFinish, hasChanges]);
+
+  const visibleCategories = useMemo(() => {
+    if (showHidden) return categories;
+    return categories.filter((c) => {
+      const explicitlyActive = (c as any).is_active;
+      const hasExplicit = (c as any).is_active !== undefined;
+      const inferredActive = c.status !== "hidden";
+      const isActive = hasExplicit ? explicitlyActive : inferredActive;
+      // Always show if selected even if not active/hidden
+      if (userSportsIds.includes(c.id)) return true;
+      return !!isActive;
+    });
+  }, [categories, showHidden, userSportsIds]);
 
   return (
     <div className="px-4">
@@ -86,21 +123,28 @@ export function SportsSelection({
             size="sm"
             onClick={() => setShowHidden((v) => !v)}
             className="order-2 md:order-none"
+            disabled={saving}
           >
             {showHidden ? "Hide Unlisted" : "Show Unlisted"}
           </Button>
           {userSportsIds.length > 0 && (
-            <Button size="sm" onClick={onFinish}>
-              Continue
+            <Button size="sm" onClick={handleFinish} disabled={saving}>
+              <span className="flex items-center gap-2">
+                {saving && (
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                )}
+                {hasChanges ? "Continue" : "Back"}
+              </span>
             </Button>
           )}
         </div>
       </div>
 
       <div
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6"
+        className="relative grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6"
         role="list"
         aria-label="Sports categories multi-select"
+        aria-busy={saving}
       >
         {visibleCategories.map((category) => {
           const isSelected = userSportsIds.includes(category.id);
@@ -117,13 +161,14 @@ export function SportsSelection({
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  onToggleSport(category.id);
+                  handleToggleSport(category.id);
                 }
               }}
               className={`relative cursor-pointer transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${
                 isSelected ? "ring-2 ring-primary" : "border-muted"
-              }`}
-              onClick={() => onToggleSport(category.id)}
+              } ${saving ? "opacity-50 pointer-events-none" : ""}`}
+              onClick={() => handleToggleSport(category.id)}
+              aria-disabled={saving}
             >
               <CardHeader className="pr-10">
                 <div className="flex items-start justify-between">
@@ -182,7 +227,14 @@ export function SportsSelection({
               </span>
             )}
         </div>
+        {saving && (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <span className="text-xs">Saving changes…</span>
+          </div>
+        )}
       </div>
+      {/* Inline overlay spinner over the cards region while saving */}
     </div>
   );
 }

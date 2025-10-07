@@ -12,6 +12,7 @@ import {
 import { MasterSideNav } from "@/components/side-nav";
 import { NavigationProvider } from "@/contexts/navigation-provider";
 import type { NavigationCategory } from "@/components/side-nav/types";
+import { WishlistProvider } from "@/contexts/wishlist-context";
 
 export function TrickipediaLayoutClient({
   children,
@@ -24,6 +25,7 @@ export function TrickipediaLayoutClient({
 
   return (
     <NavigationProvider initialData={initialNavigationData}>
+      <WishlistProvider>
       <TrickipediaHeader
         onMobileMenuClick={() => setMobileSidebarOpen(true)}
         categories={initialNavigationData.map((cat) => ({
@@ -64,6 +66,7 @@ export function TrickipediaLayoutClient({
           <SidebarInset className="flex-1">{children}</SidebarInset>
         </div>
       </SidebarProvider>
+      </WishlistProvider>
     </NavigationProvider>
   );
 }

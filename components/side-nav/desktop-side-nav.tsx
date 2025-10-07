@@ -13,7 +13,6 @@ import {
   UserPlus,
   LogOut,
   Network,
-  CircleCheck,
   Trophy,
 } from "lucide-react";
 import Link from "next/link";
@@ -43,6 +42,14 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
     expandedItems,
     setExpandedItems,
   } = useNavigation();
+
+  const selectedIds: string[] = (user as any)?.users_sports_ids || [];
+  const displayCategories = categories.filter((c: any) => {
+    const hasExplicit = c.is_active !== undefined;
+    const isActive = hasExplicit ? c.is_active : c.status !== "hidden";
+    if (isActive) return true;
+    return selectedIds.includes(c.id);
+  });
 
   const handleSignOut = async () => {
     await signOut();
@@ -81,9 +88,9 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
   };
 
   return (
-    <div className="hidden sm:flex flex-col h-full">
+    <div className="hidden sm:flex flex-col h-full min-h-0">
       <div className="h-14" />
-      <ScrollArea className="flex-1 px-3 py-4">
+      <ScrollArea className="flex-1 px-3 py-4 min-h-0">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -103,16 +110,23 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
               <span>Sports & Disciplines</span>
             </Link>
 
-            {categories.map((category) => {
+            {displayCategories.map((category) => {
               const Icon =
                 iconMap[category.icon_name ?? "circle"] || iconMap["circle"];
               const isExpanded = expandedItems.has(category.slug);
+              const isHidden =
+                (category as any).is_active === false ||
+                category.status === "hidden";
               return (
                 <div key={category.slug} className="flex flex-col">
                   <button
-                    onClick={() =>
-                      toggleExpanded(category.slug, true, category.slug)
-                    }
+                    onClick={() => {
+                      // Keep expanded while navigating client-side
+                      if (!isExpanded)
+                        toggleExpanded(category.slug, true, category.slug);
+                      router.push(`/${category.slug}`);
+                      onItemClick?.();
+                    }}
                     className={cn(
                       "flex items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-muted",
                       isExpanded && "bg-sidebar-accent/50"
@@ -126,6 +140,11 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
                           BETA
                         </span>
                       )}
+                      {isHidden && selectedIds.includes(category.id) && (
+                        <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground border border-border">
+                          UNLISTED
+                        </span>
+                      )}
                     </div>
                     <ChevronRight
                       className={cn(
@@ -136,14 +155,6 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
                   </button>
                   {isExpanded && (
                     <div className="ml-7 mt-1 mb-2 space-y-1">
-                      <Link
-                        href={`/${category.slug}`}
-                        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-accent transition-colors hover:bg-sidebar-accent hover:text-muted"
-                        onClick={onItemClick}
-                      >
-                        <CircleCheck className="h-4 w-4" />
-                        <span>All Tricks</span>
-                      </Link>
                       {category.subcategoriesLoading ? (
                         <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -300,6 +311,15 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
                       onClick={onItemClick}
                     >
                       Manage Users
+                    </Link>
+                  </div>
+                  <div className="ml-4 space-y-0.5">
+                    <Link
+                      href="/admin/manage-sports"
+                      className="block rounded-md px-3 py-1.5 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-muted"
+                      onClick={onItemClick}
+                    >
+                      Manage Categories
                     </Link>
                   </div>
                   <div className="ml-4 space-y-0.5">

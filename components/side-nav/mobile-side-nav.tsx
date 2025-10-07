@@ -107,6 +107,15 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
     }
   };
 
+  const selectedIds: string[] = (user as any)?.users_sports_ids || [];
+  // Filter: show active categories or those selected by user (even if hidden/unlisted)
+  const displayCategories = categories.filter((c: any) => {
+    const hasExplicit = c.is_active !== undefined;
+    const isActive = hasExplicit ? c.is_active : c.status !== "hidden";
+    if (isActive) return true;
+    return selectedIds.includes(c.id);
+  });
+
   return (
     <div className="block sm:hidden flex h-full flex-col">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-4">
@@ -118,7 +127,6 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
           <TrickipediaLogo />
         </Link>
       </div>
-
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="flex flex-col gap-2">
           <Link
@@ -144,9 +152,12 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
             }}
             className="space-y-1"
           >
-            {categories.map((category) => {
+            {displayCategories.map((category) => {
               const Icon =
                 iconMap[category.icon_name ?? "circle"] || iconMap["circle"];
+              const isHidden =
+                (category as any).is_active === false ||
+                category.status === "hidden";
               return (
                 <AccordionItem
                   key={category.slug}
@@ -160,6 +171,11 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
                       {category.status === "in_progress" && (
                         <span className="ml-2 px-2 py-0.5 rounded text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300">
                           BETA
+                        </span>
+                      )}
+                      {isHidden && selectedIds.includes(category.id) && (
+                        <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground border border-border">
+                          UNLISTED
                         </span>
                       )}
                     </div>
@@ -330,6 +346,15 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
                     onClick={onItemClick}
                   >
                     Manage Users
+                  </Link>
+                </div>
+                <div className="ml-4 space-y-0.5">
+                  <Link
+                    href="/admin/manage-sports"
+                    className="block rounded-md px-3 py-1.5 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-muted"
+                    onClick={onItemClick}
+                  >
+                    Manage Categories
                   </Link>
                 </div>
                 <div className="ml-4 space-y-0.5">

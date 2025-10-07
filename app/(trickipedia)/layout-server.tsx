@@ -34,7 +34,7 @@ async function getNavigationData(): Promise<NavigationCategory[]> {
         )
       `
       )
-      .eq("is_active", true)
+
       .eq("subcategories.is_active", true)
       .order("sort_order")
       .order("sort_order", { foreignTable: "subcategories" })

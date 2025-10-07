@@ -1,12 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight, Heart, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { Trick } from "@/types/trick";
+import { supabase } from "@/utils/supabase/client";
+import { toast } from "sonner";
+import { useWishlist } from "@/contexts/wishlist-context";
+import { LayoutGroup, motion, AnimatePresence } from "framer-motion";
 
 interface TrickWithProgress extends Trick {
   user_can_do: boolean;
@@ -18,7 +22,7 @@ interface NextSuggestedTricksProps {
   maxSuggestions?: number;
   allTricks: Trick[];
   userCanDoTricks: Set<string>;
-  userSportsIds: string[];
+  userSportsIds: string[]; // Array of category slugs (not IDs)
   onMarkLearned: (trickId: string) => Promise<void> | void;
   loading?: boolean;
 }
@@ -31,6 +35,21 @@ export function NextTricksSuggestions({
   onMarkLearned,
   loading = false,
 }: NextSuggestedTricksProps) {
+  const { items: wishlistItems, add: addWishlist, adding } = useWishlist() as any;
+  const wishlistIds = useMemo(() => new Set(wishlistItems.map((t: any) => t.id)), [wishlistItems]);
+
+  const handleAddGoal = useCallback(async (trickId: string, trick?: any) => {
+    if (wishlistIds.has(trickId)) return;
+    // Provide optimistic data so the wishlist immediately shows name & category
+    const optimistic = trick
+      ? {
+          name: trick.name,
+          slug: trick.slug,
+          subcategory: trick.subcategory,
+        }
+      : undefined;
+    await addWishlist(trickId, optimistic);
+  }, [wishlistIds, addWishlist]);
   // Calculate suggested tricks based on user progress and selected sports
   const calculatedSuggestions = useMemo(() => {
     if (!allTricks.length || userSportsIds.length === 0) return [];
@@ -38,13 +57,44 @@ export function NextTricksSuggestions({
     const trickById = new Map(allTricks.map((trick) => [trick.id, trick]));
     const tricksByCategory = new Map<string, Trick[]>();
 
-    // Filter tricks to only include those from selected sports
+    // Filter tricks to only include those from selected sports.
+    // userSportsIds now contains category slugs (converted from IDs in parent component)
     const relevantTricks = allTricks.filter((trick) => {
-      const categoryId = (trick.subcategory?.master_category as any)?.id as
-        | string
-        | undefined;
-      return !!categoryId && userSportsIds.includes(categoryId);
+      if (userSportsIds.length === 0) return true; // no filtering if user hasn't selected specific sports
+      const categorySlug = trick.subcategory?.master_category?.slug;
+      return categorySlug && userSportsIds.includes(categorySlug);
     });
+
+    // Remove tricks already in wishlist to avoid redundancy
+    const filteredForWishlist = relevantTricks.filter(
+      (t) => !wishlistIds.has(t.id)
+    );
+
+    // DEBUG: Log filtering results
+    if (process.env.NODE_ENV === "development") {
+      console.log("NextTricksSuggestions DEBUG:", {
+        totalTricks: allTricks.length,
+        userSportsSlugs: userSportsIds,
+        relevantTricksCount: relevantTricks.length,
+        sampleTrickCategories: allTricks.slice(0, 3).map((t) => ({
+          name: t.name,
+          categorySlug: t.subcategory?.master_category?.slug,
+        })),
+        userCanDoTricksSize: userCanDoTricks.size,
+      });
+    }
+
+    // Dev warning once (inside memo) if we detect no relevant tricks
+    if (
+      process.env.NODE_ENV === "development" &&
+      relevantTricks.length === 0 &&
+      userSportsIds.length > 0 &&
+      allTricks.length > 0
+    ) {
+      console.warn(
+        "NextTricksSuggestions: No relevant tricks matched userSportsIds (slugs). Check that category slugs match between user sports and trick data."
+      );
+    }
 
     relevantTricks.forEach((trick) => {
       const categorySlug = trick.subcategory?.master_category?.slug;
@@ -58,7 +108,7 @@ export function NextTricksSuggestions({
 
     const suggestions: TrickWithProgress[] = [];
 
-    relevantTricks.forEach((trick) => {
+    filteredForWishlist.forEach((trick) => {
       if (userCanDoTricks.has(trick.id)) return;
 
       const prerequisites = Array.isArray(trick.prerequisite_ids)
@@ -89,6 +139,17 @@ export function NextTricksSuggestions({
       });
     });
 
+    // DEBUG: Log after filtering out already-learned tricks
+    if (process.env.NODE_ENV === "development") {
+      const filteredOutCount = relevantTricks.length - suggestions.length;
+      console.log("NextTricksSuggestions AFTER filtering learned:", {
+        relevantTricksCount: relevantTricks.length,
+        alreadyLearnedCount: filteredOutCount,
+        suggestionsBeforeSorting: suggestions.length,
+        sampleSuggestions: suggestions.slice(0, 3).map((s) => s.name),
+      });
+    }
+
     // Sort by difficulty and prerequisites
     const sorted = suggestions.sort((a, b) => {
       // Prioritize tricks with no missing prerequisites
@@ -103,7 +164,7 @@ export function NextTricksSuggestions({
     });
 
     return sorted.slice(0, maxSuggestions);
-  }, [allTricks, userCanDoTricks, userSportsIds, maxSuggestions]);
+  }, [allTricks, userCanDoTricks, userSportsIds, maxSuggestions, wishlistIds]);
 
   const getDifficultyColor = (level?: number) => {
     if (!level)
@@ -189,10 +250,18 @@ export function NextTricksSuggestions({
         <CardTitle className="text-xl font-bold">Ready to Learn</CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Dev-only debug: JSON.stringify on a Set returns {} so show size & sample */}
+
+        <LayoutGroup>
         <div className="space-y-4">
+          <AnimatePresence mode="popLayout">
           {calculatedSuggestions.map((trick) => (
-            <div
+            <motion.div
               key={trick.id}
+              layout
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.18 } }}
               className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
             >
               <div className="space-y-2">
@@ -224,6 +293,25 @@ export function NextTricksSuggestions({
                 <div className="flex flex-col xs:flex-row sm:flex-row gap-2 pt-2 sm:pt-1 w-full max-sm:[&>*]:w-full">
                   <Button
                     size="sm"
+                    onClick={() => handleAddGoal(trick.id, trick)}
+                    disabled={wishlistIds.has(trick.id) || adding[trick.id]}
+                    className="text-xs whitespace-nowrap"
+                  >
+                    {adding[trick.id] ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : wishlistIds.has(trick.id) ? (
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                    ) : (
+                      <Heart className="h-3 w-3 mr-1" />
+                    )}
+                    {wishlistIds.has(trick.id)
+                      ? "Goal Added"
+                      : adding[trick.id]
+                      ? "Adding..."
+                      : "Add Goal"}
+                  </Button>
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => onMarkLearned(trick.id)}
                     className="text-xs whitespace-nowrap"
@@ -245,9 +333,11 @@ export function NextTricksSuggestions({
                   </Link>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
+          </AnimatePresence>
         </div>
+        </LayoutGroup>
       </CardContent>
     </Card>
   );

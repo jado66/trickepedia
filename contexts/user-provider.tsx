@@ -11,6 +11,8 @@ import React, {
 import { supabase } from "@/utils/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { getOrCreateUserProfile } from "@/lib/xp/user-xp-utils";
+import { fetchMasterCategories } from "@/lib/fetch-tricks"; // NEW
+import type { MasterCategory } from "@/lib/types/database"; // NEW
 
 export type UserRole = "user" | "administrator" | "moderator";
 
@@ -52,6 +54,10 @@ interface UserContextType {
   hasAdminAccess: () => boolean;
   hasModeratorAccess: () => boolean;
   hasRole: (role: UserRole) => boolean;
+  // NEW user category helpers
+  userCategoryIds: string[];
+  userCategories: MasterCategory[];
+  updateUserSports: (categoryIds: string[]) => Promise<void>;
 }
 
 export const UserContext = createContext<UserContextType | undefined>(
@@ -72,6 +78,11 @@ const UserProviderComponent = ({ children }: { children: React.ReactNode }) => {
   const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  // NEW state for category resolution
+  const [allCategoriesCache, setAllCategoriesCache] = useState<
+    MasterCategory[] | null
+  >(null);
+  const [userCategories, setUserCategories] = useState<MasterCategory[]>([]);
 
   // Track mounted state to prevent state updates after unmount
   const isMounted = useRef(true);
@@ -478,6 +489,46 @@ const UserProviderComponent = ({ children }: { children: React.ReactNode }) => {
     return user.role === role;
   };
 
+  // Effect to load user categories based on users_sports_ids
+  useEffect(() => {
+    // When user sports ids change, ensure categories loaded & derive userCategories
+    const loadCategoriesIfNeeded = async () => {
+      const ids = user?.users_sports_ids || [];
+      if (ids.length === 0) {
+        setUserCategories([]);
+        return;
+      }
+      try {
+        let categoriesData = allCategoriesCache;
+        if (!categoriesData) {
+          const result = await fetchMasterCategories();
+          if (result.success) {
+            categoriesData = result.data as MasterCategory[];
+            setAllCategoriesCache(categoriesData);
+          } else {
+            console.warn(
+              "Failed fetching categories for user provider:",
+              result.error
+            );
+            categoriesData = [] as MasterCategory[];
+          }
+        }
+        if (categoriesData) {
+          const mapped = categoriesData.filter((c) => ids.includes(c.id));
+          setUserCategories(mapped);
+        }
+      } catch (e) {
+        console.error("Error resolving user categories:", e);
+      }
+    };
+    loadCategoriesIfNeeded();
+  }, [user?.users_sports_ids, allCategoriesCache]);
+
+  const updateUserSports = async (categoryIds: string[]) => {
+    await updateUser({ users_sports_ids: categoryIds });
+    // user state already updated inside updateUser; effect above will recompute userCategories
+  };
+
   const contextValue = useMemo(
     () => ({
       user,
@@ -493,6 +544,9 @@ const UserProviderComponent = ({ children }: { children: React.ReactNode }) => {
       hasAdminAccess,
       hasModeratorAccess,
       hasRole,
+      userCategoryIds: user?.users_sports_ids || [], // NEW
+      userCategories, // NEW
+      updateUserSports, // NEW
     }),
     [
       user,
@@ -508,6 +562,8 @@ const UserProviderComponent = ({ children }: { children: React.ReactNode }) => {
       hasAdminAccess,
       hasModeratorAccess,
       hasRole,
+      userCategories,
+      updateUserSports,
     ]
   );
 

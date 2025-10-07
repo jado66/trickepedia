@@ -163,12 +163,42 @@ export const useWaiverStore = create<WaiverStore>()((set, get) => ({
   getWaiversByMemberId: (memberId: string) =>
     get().signedWaivers.filter((w) => w.memberId === memberId),
   getPrimaryWaiverStatus: (memberId: string) => {
-    const list = get()
-      .signedWaivers.filter((w) => w.memberId === memberId)
-      .sort(
-        (a, b) =>
-          new Date(b.signedAt).getTime() - new Date(a.signedAt).getTime()
-      );
+    let list = get().signedWaivers.filter((w) => w.memberId === memberId);
+
+    // Fallback: if linkage missing (race during init) try matching by email or participant name
+    if (!list.length) {
+      try {
+        const gymState = useGymStore.getState();
+        const member = gymState.members?.find((m: any) => m.id === memberId);
+        if (member) {
+          const emailLower = member.email?.toLowerCase();
+          if (emailLower) {
+            list = get().signedWaivers.filter(
+              (w) =>
+                w.email?.toLowerCase() === emailLower || w.memberId === memberId
+            );
+          }
+          // If still none, fallback to name match
+          if (!list.length) {
+            list = get().signedWaivers.filter(
+              (w) => w.participantName === member.name
+            );
+          }
+          // De-dupe just in case
+          if (list.length) {
+            const seen = new Set<string>();
+            list = list.filter((w) =>
+              seen.has(w.id) ? false : (seen.add(w.id), true)
+            );
+          }
+        }
+      } catch {}
+    }
+
+    list = list.sort(
+      (a, b) => new Date(b.signedAt).getTime() - new Date(a.signedAt).getTime()
+    );
+
     if (!list.length) return { label: "None", state: "none" };
     const latest = list[0];
     const evald = evaluateWaiverState(latest);

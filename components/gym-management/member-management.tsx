@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 
 import { useGym } from "@/contexts/gym/gym-provider";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,15 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 // Lightweight inline membership plan editor (avoids separate page)
 import { MembershipPlans } from "@/components/gym-management/membership-plans";
 import {
@@ -36,6 +45,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  useReactTable,
+  ColumnDef,
+  getCoreRowModel,
+  getSortedRowModel,
+  getPaginationRowModel,
+  SortingState,
+  flexRender,
+} from "@tanstack/react-table";
 import {
   Search,
   Plus,
@@ -67,6 +85,29 @@ interface MemberBasic {
   avatar?: string;
 }
 
+// Stable defaults (avoid recreating objects each render which caused localStorage hook effect loops)
+const MEMBER_TABLE_DEFAULT_STATE: {
+  sorting: SortingState;
+  columnVisibility: Record<string, boolean>;
+  pageSize: number;
+} = Object.freeze({
+  sorting: [] as SortingState,
+  columnVisibility: {} as Record<string, boolean>,
+  pageSize: 25,
+});
+
+type WaiverFilter = "all" | "active" | "expired" | "expiringSoon" | "none";
+interface MemberFiltersState {
+  membership: string; // "all" or plan name
+  statuses: string[]; // selected statuses
+  waiver: WaiverFilter;
+}
+const MEMBER_TABLE_DEFAULT_FILTERS: MemberFiltersState = Object.freeze({
+  membership: "all",
+  statuses: [],
+  waiver: "all",
+});
+
 // small helper to compute age in years from ISO birth date
 function calculateAge(birthDate: string | undefined): number | undefined {
   if (!birthDate) return undefined;
@@ -90,10 +131,21 @@ export function MemberManagement() {
   );
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
-  const [sortKey, setSortKey] = useState<keyof MemberBasic>("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  // Persisted table state
+  const [persistedState, setPersistedState] = useLocalStorage(
+    "memberTableState",
+    MEMBER_TABLE_DEFAULT_STATE
+  );
+  const [sorting, setSorting] = useState<SortingState>(
+    persistedState.sorting || []
+  );
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<string, boolean>
+  >(persistedState.columnVisibility || {});
+  const [filters, setFilters] = useLocalStorage(
+    "memberTableFilters",
+    MEMBER_TABLE_DEFAULT_FILTERS
+  );
   const {
     members,
     addMember,
@@ -116,47 +168,227 @@ export function MemberManagement() {
 
   const filteredMembers = useMemo(() => {
     const query = searchTerm.trim();
-    if (!query) return members;
-    const results = fuse.search(query);
-    return results.map((result) => result.item);
-  }, [members, searchTerm, fuse]);
+    let base: MemberBasic[];
+    if (!query) {
+      base = members as MemberBasic[];
+    } else {
+      base = fuse.search(query).map((r) => r.item as MemberBasic);
+    }
+    if (filters.membership !== "all") {
+      base = base.filter((m) => m.membershipType === filters.membership);
+    }
+    if (filters.statuses.length > 0) {
+      base = base.filter((m) => filters.statuses.includes(m.status));
+    }
+    if (filters.waiver !== "all") {
+      base = base.filter(
+        (m) => getPrimaryWaiverStatus(m.id).state === filters.waiver
+      );
+    }
+    return base;
+  }, [members, searchTerm, fuse, filters, getPrimaryWaiverStatus]);
 
-  // Sorting
-  const sortedMembers = useMemo(() => {
-    const list = [...filteredMembers];
-    list.sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
-      if (av == null) return -1;
-      if (bv == null) return 1;
-      if (typeof av === "string" && typeof bv === "string") {
-        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-      }
-      if (av < (bv as any)) return sortDir === "asc" ? -1 : 1;
-      if (av > (bv as any)) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-    return list;
-  }, [filteredMembers, sortKey, sortDir]);
-
-  // Pagination
-  const totalPages = Math.ceil(sortedMembers.length / pageSize) || 1;
-  const pagedMembers = useMemo(() => {
-    const start = page * pageSize;
-    return sortedMembers.slice(start, start + pageSize);
-  }, [sortedMembers, page, pageSize]);
-
-  const toggleSort = useCallback(
-    (key: keyof MemberBasic) => {
-      if (sortKey === key) {
-        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-      } else {
-        setSortKey(key);
-        setSortDir("asc");
-      }
-    },
-    [sortKey]
+  // Column Definitions (TanStack Table)
+  const columns = useMemo<ColumnDef<MemberBasic>[]>(
+    () => [
+      {
+        id: "avatar",
+        header: "Avatar",
+        cell: ({ row }) => {
+          const member = row.original;
+          return (
+            <Avatar className="h-8 w-8">
+              <AvatarImage
+                src={
+                  member.avatar ||
+                  `/placeholder.svg?height=32&width=32&query=${member.name}`
+                }
+                alt={member.name}
+              />
+              <AvatarFallback>
+                {member.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
+              </AvatarFallback>
+            </Avatar>
+          );
+        },
+        size: 60,
+      },
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ row }) => (
+          <div className="font-medium max-w-[180px] truncate">
+            {row.original.name}
+          </div>
+        ),
+        enableHiding: false,
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5 text-muted-foreground max-w-[200px]">
+            <Mail className="h-3 w-3 flex-shrink-0" />
+            <span className="truncate">{row.original.email}</span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "phone",
+        header: "Phone",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Phone className="h-3 w-3 flex-shrink-0" />
+            <span>{row.original.phone}</span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "membershipType",
+        header: "Membership",
+        cell: ({ row }) => (
+          <Badge variant="secondary" className="max-w-[140px] truncate">
+            {row.original.membershipType}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <Badge
+            className={`inline-flex items-center gap-1.5 ${getStatusColor(
+              row.original.status
+            )}`}
+          >
+            {getStatusIcon(row.original.status)}
+            <span className="capitalize">{row.original.status}</span>
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "joinDate",
+        header: "Join Date",
+        cell: ({ row }) =>
+          row.original.joinDate
+            ? new Date(row.original.joinDate).toLocaleDateString()
+            : "—",
+      },
+      {
+        accessorKey: "lastVisit",
+        header: "Last Visit",
+        cell: ({ row }) => row.original.lastVisit || "—",
+      },
+      {
+        id: "waiver",
+        header: "Waiver",
+        cell: ({ row }) => {
+          const waiverStatus = getPrimaryWaiverStatus(row.original.id);
+          const waiverBadgeStyle =
+            {
+              none: "bg-red-100 text-red-700",
+              expired: "bg-red-100 text-red-700",
+              expiringSoon: "bg-amber-100 text-amber-800",
+              active: "bg-green-100 text-green-700",
+            }[waiverStatus.state as any] || "bg-gray-100 text-gray-700";
+          return (
+            <span
+              className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${waiverBadgeStyle}`}
+            >
+              {waiverStatus.label}
+            </span>
+          );
+        },
+      },
+      {
+        id: "age",
+        header: "Age",
+        cell: ({ row }) => {
+          const member = row.original;
+          const age =
+            (member as MemberBasic).ageYears ??
+            (member.birthDate ? calculateAge(member.birthDate) : undefined);
+          return (
+            <span className="text-sm">{age != null ? `${age} yrs` : "—"}</span>
+          );
+        },
+        size: 60,
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedMember(row.original as MemberBasic);
+                setIsEditDialogOpen(true);
+              }}
+            >
+              View
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeMember(row.original.id);
+              }}
+            >
+              Remove
+            </Button>
+          </div>
+        ),
+        size: 120,
+        enableHiding: false,
+      },
+    ],
+    [removeMember, getPrimaryWaiverStatus]
   );
+
+  const table = useReactTable({
+    data: filteredMembers,
+    columns,
+    state: { sorting, columnVisibility },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: (updater) => {
+      setColumnVisibility((old) =>
+        typeof updater === "function" ? updater(old) : updater
+      );
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: { pageIndex: 0, pageSize: persistedState.pageSize || 25 },
+    },
+    enableMultiSort: true,
+  });
+
+  // Reset to first page on search term change
+  React.useEffect(() => {
+    table.setPageIndex(0);
+  }, [searchTerm, filters, table]);
+
+  React.useEffect(() => {
+    const pageSize = table.getState().pagination.pageSize;
+    // Shallow compare to avoid unnecessary state sets
+    if (
+      persistedState.pageSize === pageSize &&
+      JSON.stringify(persistedState.sorting) === JSON.stringify(sorting) &&
+      JSON.stringify(persistedState.columnVisibility) ===
+        JSON.stringify(columnVisibility)
+    ) {
+      return;
+    }
+    setPersistedState({ sorting, columnVisibility, pageSize });
+  }, [sorting, columnVisibility, table, persistedState]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -247,25 +479,96 @@ export function MemberManagement() {
       </TabsList>
       <TabsContent value="members" className="space-y-6">
         {/* Controls Row */}
-        <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
-          <div className="flex gap-3 flex-1">
+        <div className="flex flex-col xl:flex-row gap-3 xl:items-center xl:justify-between">
+          <div className="flex flex-wrap gap-3 flex-1 items-center">
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search name, email, membership..."
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(0);
-                }}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
             <Select
-              value={String(pageSize)}
+              value={filters.membership}
+              onValueChange={(val) =>
+                setFilters({ ...filters, membership: val })
+              }
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Membership" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Plans</SelectItem>
+                {membershipPlans
+                  .filter((p) => p.status === "active")
+                  .map((p) => (
+                    <SelectItem key={p.id} value={p.name}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Status
+                  {filters.statuses.length > 0 && (
+                    <span className="ml-2 text-xs opacity-70">
+                      {filters.statuses.length}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-40">
+                <DropdownMenuLabel>Status</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {[
+                  ["active", "Active"],
+                  ["inactive", "Inactive"],
+                  ["suspended", "Suspended"],
+                ].map(([v, l]) => {
+                  const checked = filters.statuses.includes(v);
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={v}
+                      checked={checked}
+                      onCheckedChange={(c) => {
+                        setFilters({
+                          ...filters,
+                          statuses: c
+                            ? [...filters.statuses, v]
+                            : filters.statuses.filter((s) => s !== v),
+                        });
+                      }}
+                    >
+                      {l}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Select
+              value={filters.waiver}
+              onValueChange={(v: any) => setFilters({ ...filters, waiver: v })}
+            >
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Waiver" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Waivers</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="expiringSoon">Expiring Soon</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="none">None</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={String(table.getState().pagination.pageSize)}
               onValueChange={(v) => {
-                setPageSize(Number(v));
-                setPage(0);
+                table.setPageSize(Number(v));
+                table.setPageIndex(0);
               }}
             >
               <SelectTrigger className="w-28">
@@ -279,6 +582,46 @@ export function MemberManagement() {
                 ))}
               </SelectContent>
             </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Columns
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="w-48 max-h-72 overflow-auto"
+              >
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {table
+                  .getAllLeafColumns()
+                  .filter((c) => c.getCanHide())
+                  .map((col) => (
+                    <DropdownMenuCheckboxItem
+                      key={col.id}
+                      checked={col.getIsVisible()}
+                      onCheckedChange={(c) => col.toggleVisibility(!!c)}
+                      className="capitalize"
+                    >
+                      {col.id}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchTerm("");
+                setFilters({ membership: "all", statuses: [], waiver: "all" });
+                setSorting([]);
+                table.resetColumnVisibility();
+                table.setPageIndex(0);
+              }}
+            >
+              Reset
+            </Button>
           </div>
           <div className="flex justify-end">
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -380,44 +723,68 @@ export function MemberManagement() {
         <div className="rounded-md border">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-[60px]">Avatar</TableHead>
-                {(
-                  [
-                    ["name", "Name"],
-                    ["email", "Email"],
-                    ["phone", "Phone"],
-                    ["membershipType", "Membership"],
-                    ["status", "Status"],
-                    ["joinDate", "Join Date"],
-                    ["lastVisit", "Last Visit"],
-                  ] as [keyof MemberBasic, string][]
-                ).map(([key, label]) => (
-                  <TableHead key={key}>
-                    <button
-                      type="button"
-                      onClick={() => toggleSort(key)}
-                      className="inline-flex items-center gap-1 hover:underline font-medium"
-                      aria-label={`Sort by ${label}`}
-                    >
-                      {label}
-                      <ArrowUpDown
-                        className={`h-3 w-3 transition-opacity ${
-                          sortKey === key ? "opacity-100" : "opacity-30"
-                        }`}
-                      />
-                    </button>
-                  </TableHead>
-                ))}
-                <TableHead>Waiver</TableHead>
-                <TableHead className="w-[60px]">Age</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const sortedIndex = sorting.findIndex(
+                      (s) => s.id === header.column.id
+                    );
+                    const isSorted = header.column.getIsSorted();
+                    return (
+                      <TableHead
+                        key={header.id}
+                        className={
+                          header.column.id === "avatar"
+                            ? "w-[60px]"
+                            : header.column.id === "age"
+                            ? "w-[60px]"
+                            : header.column.id === "actions"
+                            ? "text-right"
+                            : undefined
+                        }
+                      >
+                        {header.isPlaceholder ? null : (
+                          <button
+                            type="button"
+                            onClick={header.column.getToggleSortingHandler()}
+                            className="inline-flex items-center gap-1 hover:underline font-medium"
+                            title={
+                              isSorted
+                                ? `Sorted ${header.column.getIsSorted()} (shift+click to multi-sort)`
+                                : "Click to sort. Shift+Click to multi-sort"
+                            }
+                          >
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                            <span className="inline-flex items-center gap-0.5">
+                              <ArrowUpDown
+                                className={`h-3 w-3 transition-opacity ${
+                                  isSorted ? "opacity-100" : "opacity-30"
+                                }`}
+                              />
+                              {sortedIndex > -1 && sorting.length > 1 && (
+                                <span className="text-[10px] font-semibold bg-muted px-1 rounded">
+                                  {sortedIndex + 1}
+                                </span>
+                              )}
+                            </span>
+                          </button>
+                        )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))}
             </TableHeader>
             <TableBody>
-              {pagedMembers.length === 0 ? (
+              {table.getRowModel().rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
                     <div className="text-muted-foreground">
                       {searchTerm
                         ? "No members found matching your search."
@@ -426,126 +793,32 @@ export function MemberManagement() {
                   </TableCell>
                 </TableRow>
               ) : (
-                pagedMembers.map((member) => {
-                  const age =
-                    (member as MemberBasic).ageYears ??
-                    (member.birthDate
-                      ? calculateAge(member.birthDate)
-                      : undefined);
-                  const waiverStatus = getPrimaryWaiverStatus(member.id);
-                  const waiverBadgeStyle =
-                    {
-                      none: "bg-red-100 text-red-700",
-                      expired: "bg-red-100 text-red-700",
-                      expiringSoon: "bg-amber-100 text-amber-800",
-                      active: "bg-green-100 text-green-700",
-                    }[waiverStatus.state as any] || "bg-gray-100 text-gray-700";
-                  return (
-                    <TableRow
-                      key={member.id}
-                      className="cursor-pointer"
-                      onClick={() => {
-                        setSelectedMember(member as MemberBasic);
-                        setIsEditDialogOpen(true);
-                      }}
-                    >
-                      <TableCell>
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage
-                            src={
-                              member.avatar ||
-                              `/placeholder.svg?height=32&width=32&query=${member.name}`
-                            }
-                            alt={member.name}
-                          />
-                          <AvatarFallback>
-                            {member.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setSelectedMember(row.original as MemberBasic);
+                      setIsEditDialogOpen(true);
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        className={
+                          cell.column.id === "actions"
+                            ? "text-right"
+                            : undefined
+                        }
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
                       </TableCell>
-                      <TableCell className="font-medium">
-                        <div className="max-w-[180px] truncate">
-                          {member.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 text-muted-foreground max-w-[200px]">
-                          <Mail className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{member.email}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Phone className="h-3 w-3 flex-shrink-0" />
-                          <span>{member.phone}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="secondary"
-                          className="max-w-[140px] truncate"
-                        >
-                          {member.membershipType}
-                        </Badge>
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge
-                          className={`inline-flex items-center gap-1.5 ${getStatusColor(
-                            member.status
-                          )}`}
-                        >
-                          {getStatusIcon(member.status)}
-                          <span className="capitalize">{member.status}</span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {member.joinDate
-                          ? new Date(member.joinDate).toLocaleDateString()
-                          : "—"}
-                      </TableCell>
-                      <TableCell>{member.lastVisit || "—"}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${waiverBadgeStyle}`}
-                        >
-                          {waiverStatus.label}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {age != null ? `${age} yrs` : "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedMember(member as MemberBasic);
-                              setIsEditDialogOpen(true);
-                            }}
-                          >
-                            View
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeMember(member.id);
-                            }}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                    ))}
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
@@ -553,29 +826,43 @@ export function MemberManagement() {
         {/* Footer / Pagination */}
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between text-xs text-muted-foreground">
           <div>
-            Showing {pagedMembers.length === 0 ? 0 : page * pageSize + 1}–
-            {page * pageSize + pagedMembers.length} of {sortedMembers.length}
-            {searchTerm && (
-              <span className="ml-1">(filtered from {members.length})</span>
-            )}
+            {(() => {
+              const total = filteredMembers.length;
+              const pageIndex = table.getState().pagination.pageIndex;
+              const pageSize = table.getState().pagination.pageSize;
+              const start = total === 0 ? 0 : pageIndex * pageSize + 1;
+              const end =
+                pageIndex * pageSize + table.getRowModel().rows.length;
+              return (
+                <>
+                  Showing {start}–{end} of {total}
+                  {searchTerm && (
+                    <span className="ml-1">
+                      (filtered from {members.length})
+                    </span>
+                  )}
+                </>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              disabled={page === 0}
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={!table.getCanPreviousPage()}
+              onClick={() => table.previousPage()}
             >
               Prev
             </Button>
             <span>
-              Page {page + 1} / {totalPages}
+              Page {table.getState().pagination.pageIndex + 1} /{" "}
+              {table.getPageCount() || 1}
             </span>
             <Button
               variant="outline"
               size="sm"
-              disabled={page + 1 >= totalPages}
-              onClick={() => setPage((p) => (p + 1 < totalPages ? p + 1 : p))}
+              disabled={!table.getCanNextPage()}
+              onClick={() => table.nextPage()}
             >
               Next
             </Button>

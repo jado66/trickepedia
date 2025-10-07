@@ -39,6 +39,7 @@ export function UserDashboard() {
   const [userSportsIds, setUserSportsIds] = useState<string[]>([]);
   const [draftSportsIds, setDraftSportsIds] = useState<string[]>([]);
   const [selectingSports, setSelectingSports] = useState(false);
+  const [savingSports, setSavingSports] = useState(false);
 
   const { user, updateUser, isLoading: authLoading } = useUser();
 
@@ -71,30 +72,32 @@ export function UserDashboard() {
     );
   };
 
-  const handleFinishSportsSelection = async () => {
-    const newSportsIds = draftSportsIds;
+  const handleFinishSportsSelection = async (hasChanges?: boolean) => {
+    // If no changes, just exit selection mode
+    if (!hasChanges) {
+      setSelectingSports(false);
+      return;
+    }
 
+    const newSportsIds = draftSportsIds;
+    setSavingSports(true);
     if (user) {
       try {
-        await updateUser({
-          users_sports_ids: newSportsIds,
-        });
-
+        await updateUser({ users_sports_ids: newSportsIds });
         setUserSportsIds(newSportsIds);
         toast.success("Sports selection saved");
-
-        // Refresh progress stats after updating sports
         await refreshProgress();
       } catch (e) {
         console.error("Failed saving sports selection:", e);
         toast.error("Failed to save sports selection");
+        setSavingSports(false);
         return;
       }
     } else {
       toast("Login to save your selections and track progress");
       setUserSportsIds(newSportsIds);
     }
-
+    setSavingSports(false);
     setSelectingSports(false);
   };
 
@@ -117,6 +120,17 @@ export function UserDashboard() {
       setDraftSportsIds(userSportsIds);
     }
   }, [selectingSports, userSportsIds]);
+
+  // Convert category IDs to slugs for filtering tricks
+  // userSportsIds contains category IDs, but tricks only have master_category.slug
+  const userSportsSlugs = useMemo(() => {
+    return userSportsIds
+      .map((id) => {
+        const category = categories.find((cat) => cat.id === id);
+        return category?.slug;
+      })
+      .filter((slug): slug is string => !!slug);
+  }, [userSportsIds, categories]);
 
   // Show loading while we're waiting for all necessary data
   const isLoading = authLoading || categoriesLoading || tricksLoading;
@@ -147,6 +161,7 @@ export function UserDashboard() {
           userSportsIds={draftSportsIds}
           onToggleSport={toggleDraftSport}
           onFinish={handleFinishSportsSelection}
+          loading={savingSports}
         />
       </div>
     );
@@ -192,7 +207,7 @@ export function UserDashboard() {
                 maxSuggestions={6}
                 allTricks={allTricks}
                 userCanDoTricks={userCanDoTricks}
-                userSportsIds={userSportsIds}
+                userSportsIds={userSportsSlugs}
                 loading={isLoading}
                 onMarkLearned={handleMarkLearned}
               />
