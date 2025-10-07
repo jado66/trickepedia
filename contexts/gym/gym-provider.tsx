@@ -688,12 +688,12 @@ export const useGymStore = create<GymStore>()((set, get) => ({
 export const useGym = useGymStore;
 
 // In development, expose reset for console
-if (process.env.NODE_ENV !== "production") {
-  if (typeof window !== "undefined") {
-    // @ts-expect-error TS2339: Property '__resetGymToSeed' does not exist on type 'Window & typeof globalThis'.
-    window.__resetGymToSeed = async () => {
-      await useGymStore.getState().resetToSeed();
-      return true;
-    };
-  }
+// if (process.env.NODE_ENV !== "production") {
+if (typeof window !== "undefined") {
+  // @ts-expect-error TS2339: Property '__resetGymToSeed' does not exist on type 'Window & typeof globalThis'.
+  window.__resetGymToSeed = async () => {
+    await useGymStore.getState().resetToSeed();
+    return true;
+  };
 }
+// }

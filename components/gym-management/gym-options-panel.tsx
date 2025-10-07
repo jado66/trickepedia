@@ -20,7 +20,7 @@ export function GymOptionsPanel() {
   } = useGym();
   const { resetSetup } = useGymSetup();
   const { resetAll, reseedAll } = usePlatform();
-  const isDev = process.env.NODE_ENV !== "production";
+  const isDev = true; //process.env.NODE_ENV !== "production";
 
   const handleClear = async () => {
     if (
