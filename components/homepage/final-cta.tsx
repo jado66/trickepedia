@@ -80,7 +80,7 @@ export function FinalCTA() {
                 asChild
                 className="text-base sm:text-lg py-3 px-4 rounded-md cursor-pointer focus:bg-muted/70 focus:text-foreground font-medium text-primary"
               >
-                <Link href="/explore">View All</Link>
+                <Link href="/sports-and-disciplines">View All</Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
