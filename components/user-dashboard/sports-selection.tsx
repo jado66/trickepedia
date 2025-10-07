@@ -106,7 +106,8 @@ export function SportsSelection({
           const isSelected = userSportsIds.includes(category.id);
           const Icon = getCategoryIcon(category.icon_name);
           const isHidden =
-            (category as any).is_active === false || category.status === "hidden";
+            (category as any).is_active === false ||
+            category.status === "hidden";
           return (
             <Card
               key={category.id}
