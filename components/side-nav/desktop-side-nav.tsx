@@ -44,12 +44,14 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
   } = useNavigation();
 
   const selectedIds: string[] = (user as any)?.users_sports_ids || [];
-  const displayCategories = categories.filter((c: any) => {
-    const hasExplicit = c.is_active !== undefined;
-    const isActive = hasExplicit ? c.is_active : c.status !== "hidden";
-    if (isActive) return true;
-    return selectedIds.includes(c.id);
-  });
+  // Show ONLY the user's selected categories if any exist; otherwise default to active categories.
+  const displayCategories = selectedIds.length
+    ? categories.filter((c: any) => selectedIds.includes(c.id))
+    : categories.filter((c: any) => {
+        const hasExplicit = c.is_active !== undefined;
+        const isActive = hasExplicit ? c.is_active : c.status !== "hidden";
+        return isActive;
+      });
 
   const handleSignOut = async () => {
     await signOut();

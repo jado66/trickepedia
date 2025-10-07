@@ -108,13 +108,15 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
   };
 
   const selectedIds: string[] = (user as any)?.users_sports_ids || [];
-  // Filter: show active categories or those selected by user (even if hidden/unlisted)
-  const displayCategories = categories.filter((c: any) => {
-    const hasExplicit = c.is_active !== undefined;
-    const isActive = hasExplicit ? c.is_active : c.status !== "hidden";
-    if (isActive) return true;
-    return selectedIds.includes(c.id);
-  });
+  // New logic: If the user has selected categories, ONLY show those categories (even if unlisted/hidden).
+  // If the user has none selected (e.g. logged out or hasn't chosen), we fall back to showing previously visible active categories.
+  const displayCategories = selectedIds.length
+    ? categories.filter((c: any) => selectedIds.includes(c.id))
+    : categories.filter((c: any) => {
+        const hasExplicit = c.is_active !== undefined;
+        const isActive = hasExplicit ? c.is_active : c.status !== "hidden";
+        return isActive; // original active visibility fallback
+      });
 
   return (
     <div className="block sm:hidden flex h-full flex-col">

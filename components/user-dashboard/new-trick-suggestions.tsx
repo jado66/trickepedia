@@ -35,21 +35,31 @@ export function NextTricksSuggestions({
   onMarkLearned,
   loading = false,
 }: NextSuggestedTricksProps) {
-  const { items: wishlistItems, add: addWishlist, adding } = useWishlist() as any;
-  const wishlistIds = useMemo(() => new Set(wishlistItems.map((t: any) => t.id)), [wishlistItems]);
+  const {
+    items: wishlistItems,
+    add: addWishlist,
+    adding,
+  } = useWishlist() as any;
+  const wishlistIds = useMemo(
+    () => new Set(wishlistItems.map((t: any) => t.id)),
+    [wishlistItems]
+  );
 
-  const handleAddGoal = useCallback(async (trickId: string, trick?: any) => {
-    if (wishlistIds.has(trickId)) return;
-    // Provide optimistic data so the wishlist immediately shows name & category
-    const optimistic = trick
-      ? {
-          name: trick.name,
-          slug: trick.slug,
-          subcategory: trick.subcategory,
-        }
-      : undefined;
-    await addWishlist(trickId, optimistic);
-  }, [wishlistIds, addWishlist]);
+  const handleAddGoal = useCallback(
+    async (trickId: string, trick?: any) => {
+      if (wishlistIds.has(trickId)) return;
+      // Provide optimistic data so the wishlist immediately shows name & category
+      const optimistic = trick
+        ? {
+            name: trick.name,
+            slug: trick.slug,
+            subcategory: trick.subcategory,
+          }
+        : undefined;
+      await addWishlist(trickId, optimistic);
+    },
+    [wishlistIds, addWishlist]
+  );
   // Calculate suggested tricks based on user progress and selected sports
   const calculatedSuggestions = useMemo(() => {
     if (!allTricks.length || userSportsIds.length === 0) return [];
@@ -253,90 +263,96 @@ export function NextTricksSuggestions({
         {/* Dev-only debug: JSON.stringify on a Set returns {} so show size & sample */}
 
         <LayoutGroup>
-        <div className="space-y-4">
-          <AnimatePresence mode="popLayout">
-          {calculatedSuggestions.map((trick) => (
-            <motion.div
-              key={trick.id}
-              layout
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.18 } }}
-              className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold break-words flex-1 min-w-0">
-                    {trick.name}
-                  </h3>
-                  <Badge
-                    className={getDifficultyColor(
-                      trick.difficulty_level ?? undefined
+          <div className="space-y-4">
+            <AnimatePresence mode="popLayout">
+              {calculatedSuggestions.map((trick) => (
+                <motion.div
+                  key={trick.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{
+                    opacity: 0,
+                    scale: 0.9,
+                    transition: { duration: 0.18 },
+                  }}
+                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold break-words flex-1 min-w-0">
+                        {trick.name}
+                      </h3>
+                      <Badge
+                        className={getDifficultyColor(
+                          trick.difficulty_level ?? undefined
+                        )}
+                      >
+                        {getDifficultyLabel(
+                          trick.difficulty_level ?? undefined
+                        )}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-3">
+                      {trick.description || "Learn this exciting new trick!"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {trick.subcategory?.master_category?.name} •{" "}
+                      {trick.subcategory?.name}
+                    </p>
+                    {trick.missing_prerequisites?.length > 0 && (
+                      <p className="text-xs text-orange-600 dark:text-orange-400">
+                        Prerequisites needed:{" "}
+                        {trick.missing_prerequisites.join(", ")}
+                      </p>
                     )}
-                  >
-                    {getDifficultyLabel(trick.difficulty_level ?? undefined)}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {trick.description || "Learn this exciting new trick!"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {trick.subcategory?.master_category?.name} •{" "}
-                  {trick.subcategory?.name}
-                </p>
-                {trick.missing_prerequisites?.length > 0 && (
-                  <p className="text-xs text-orange-600 dark:text-orange-400">
-                    Prerequisites needed:{" "}
-                    {trick.missing_prerequisites.join(", ")}
-                  </p>
-                )}
-                <div className="flex flex-col xs:flex-row sm:flex-row gap-2 pt-2 sm:pt-1 w-full max-sm:[&>*]:w-full">
-                  <Button
-                    size="sm"
-                    onClick={() => handleAddGoal(trick.id, trick)}
-                    disabled={wishlistIds.has(trick.id) || adding[trick.id]}
-                    className="text-xs whitespace-nowrap"
-                  >
-                    {adding[trick.id] ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : wishlistIds.has(trick.id) ? (
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                    ) : (
-                      <Heart className="h-3 w-3 mr-1" />
-                    )}
-                    {wishlistIds.has(trick.id)
-                      ? "Goal Added"
-                      : adding[trick.id]
-                      ? "Adding..."
-                      : "Add Goal"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onMarkLearned(trick.id)}
-                    className="text-xs whitespace-nowrap"
-                  >
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Already Can Do
-                  </Button>
-                  <Link
-                    className="sm:w-auto"
-                    href={`/${trick.subcategory?.master_category?.slug}/${trick.subcategory?.slug}/${trick.slug}`}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full sm:w-auto"
-                    >
-                      Learn <ArrowRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-          </AnimatePresence>
-        </div>
+                    <div className="flex flex-col xs:flex-row sm:flex-row gap-2 pt-2 sm:pt-1 w-full max-sm:[&>*]:w-full">
+                      <Button
+                        size="sm"
+                        onClick={() => handleAddGoal(trick.id, trick)}
+                        disabled={wishlistIds.has(trick.id) || adding[trick.id]}
+                        className="text-xs whitespace-nowrap"
+                      >
+                        {adding[trick.id] ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : wishlistIds.has(trick.id) ? (
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        ) : (
+                          <Heart className="h-3 w-3 mr-1" />
+                        )}
+                        {wishlistIds.has(trick.id)
+                          ? "Goal Added"
+                          : adding[trick.id]
+                          ? "Adding..."
+                          : "Add Goal"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onMarkLearned(trick.id)}
+                        className="text-xs whitespace-nowrap"
+                      >
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Already Can Do
+                      </Button>
+                      <Link
+                        className="sm:w-auto"
+                        href={`/${trick.subcategory?.master_category?.slug}/${trick.subcategory?.slug}/${trick.slug}`}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                        >
+                          Learn <ArrowRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
         </LayoutGroup>
       </CardContent>
     </Card>

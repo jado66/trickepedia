@@ -205,7 +205,17 @@ export const mockUserProgress: UserProgress = {
 };
 
 export function Wishlist() {
-  const { items, loading, add, remove, removing, adding, refresh, lastAddedId, clearLastAdded } = useWishlist() as any;
+  const {
+    items,
+    loading,
+    add,
+    remove,
+    removing,
+    adding,
+    refresh,
+    lastAddedId,
+    clearLastAdded,
+  } = useWishlist() as any;
   const [wishlistTricks, setWishlistTricks] = useState<any[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedTricks, setSelectedTricks] = useState<Set<string>>(new Set());
@@ -222,7 +232,10 @@ export function Wishlist() {
   // Scroll newly added into view & highlight briefly
   useEffect(() => {
     if (lastAddedId && lastAddedRef.current) {
-      lastAddedRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      lastAddedRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
       const el = lastAddedRef.current;
       el.classList.add("ring", "ring-primary/60", "ring-offset-2");
       const timeout = setTimeout(() => {
@@ -263,7 +276,8 @@ export function Wishlist() {
       toast({
         title: "Added to wishlist",
         description: `${selectedTricks.size} trick${
-          selectedTricks.size > 1 ? "s" : ""} added to your wishlist`,
+          selectedTricks.size > 1 ? "s" : ""
+        } added to your wishlist`,
       });
       setSelectedTricks(new Set());
       setAddDialogOpen(false);
@@ -376,48 +390,49 @@ export function Wishlist() {
             {displayTricks.map((trick) => {
               const ref = trick.id === lastAddedId ? lastAddedRef : undefined;
               return (
-              <div
-                key={trick.id}
-                ref={ref as any}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="space-y-1 flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium truncate">{trick.name}</h3>
-                    {trick.subcategory?.master_category?.name && (
-                      <Badge
-                        variant="outline"
-                        className="capitalize text-xs shrink-0"
-                      >
-                        {trick.subcategory.master_category.name}
-                      </Badge>
-                    )}
+                <div
+                  key={trick.id}
+                  ref={ref as any}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium truncate">{trick.name}</h3>
+                      {trick.subcategory?.master_category?.name && (
+                        <Badge
+                          variant="outline"
+                          className="capitalize text-xs shrink-0"
+                        >
+                          {trick.subcategory.master_category.name}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewTrick(trick)}
+                    >
+                      View <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={removing[trick.id]}
+                      onClick={() => handleRemoveFromWishlist(trick.id)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    >
+                      {removing[trick.id] ? (
+                        <div className="animate-spin h-4 w-4 rounded-full border-[2px] border-red-500/30 border-t-red-500" />
+                      ) : (
+                        <X className="w-4 h-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 ml-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewTrick(trick)}
-                  >
-                    View <ArrowRight className="w-4 h-4 ml-1" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={removing[trick.id]}
-                    onClick={() => handleRemoveFromWishlist(trick.id)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                  >
-                    {removing[trick.id] ? (
-                      <div className="animate-spin h-4 w-4 rounded-full border-[2px] border-red-500/30 border-t-red-500" />
-                    ) : (
-                      <X className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )})}
+              );
+            })}
             {hasMore && (
               <div className="pt-2 border-t">
                 <Button variant="outline" className="w-full bg-transparent">
