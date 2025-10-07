@@ -1,14 +1,21 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Moon, Sparkles } from "lucide-react";
 import { useUser } from "@/contexts/user-provider";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 
+const DEFAULT_THEME = "trickipedia";
+const XP_THRESHOLD = 500;
+const XP_PER_REFERRAL = 250;
+
 export function DarkModeUnlockBanner() {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("dark-mode-banner-dismissed") !== "true";
+  });
   const [isDemoMode, setIsDemoMode] = useState(false);
   const { user } = useUser();
   const { setTheme, theme } = useTheme();
@@ -17,36 +24,45 @@ export function DarkModeUnlockBanner() {
   const previewTimeoutRef = useRef<number | null>(null);
 
   // Check if user has unlocked dark mode (500+ XP)
-  const hasUnlockedDarkMode = (user?.xp || 0) >= 500;
+  const hasUnlockedDarkMode = (user?.xp || 0) >= XP_THRESHOLD;
+  // Compute instead of early-returning before hooks (avoid conditional hook call)
+  const shouldHide = hasUnlockedDarkMode || !isVisible;
 
-  // Don't show banner if dark mode is already unlocked
-  if (hasUnlockedDarkMode || !isVisible) return null;
-
-  const referralsNeeded = 2;
+  const referralsNeeded = Math.ceil(XP_THRESHOLD / XP_PER_REFERRAL);
   const currentReferrals = user?.referrals || 0;
   const xpProgress = user?.xp || 0;
 
-  const handleInviteFriends = () => {
+  const handleInviteFriends = useCallback(() => {
+    if (!user?.id) {
+      toast.error("Unable to generate referral link. Please log in.");
+      return;
+    }
     const referralLink = `${
       window.location.origin
-    }/signup?ref=${encodeURIComponent(user?.email || "")}`;
-    navigator.clipboard.writeText(referralLink);
-    toast.success("Referral link copied!");
-  };
+    }/signup?ref=${encodeURIComponent(user.id)}`;
+    navigator.clipboard
+      .writeText(referralLink)
+      .then(() => {
+        toast.success("Referral link copied!");
+      })
+      .catch(() => {
+        toast.error("Failed to copy link. Please copy manually.");
+      });
+  }, [user?.id]);
 
-  const endPreview = () => {
+  const endPreview = useCallback(() => {
     if (previewTimeoutRef.current) {
       clearTimeout(previewTimeoutRef.current);
       previewTimeoutRef.current = null;
     }
     if (isDemoMode) {
-      setTheme(originalThemeRef.current || "trickipedia");
+      setTheme(originalThemeRef.current || DEFAULT_THEME);
       setIsDemoMode(false);
       originalThemeRef.current = undefined;
     }
-  };
+  }, [isDemoMode, setTheme]);
 
-  const handleDemoClick = () => {
+  const handleDemoClick = useCallback(() => {
     if (isDemoMode) return; // guard against double-clicks
     originalThemeRef.current = theme; // capture current theme
     setIsDemoMode(true);
@@ -54,14 +70,36 @@ export function DarkModeUnlockBanner() {
     previewTimeoutRef.current = window.setTimeout(() => {
       endPreview();
     }, 3000);
-  };
+  }, [isDemoMode, theme, setTheme, endPreview]);
+
+  const handleDismiss = useCallback(() => {
+    setIsVisible(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dark-mode-banner-dismissed", "true");
+    }
+  }, []);
+
+  // Reset dismissal if unlocked
+  useEffect(() => {
+    if (hasUnlockedDarkMode && typeof window !== "undefined") {
+      localStorage.removeItem("dark-mode-banner-dismissed");
+      setIsVisible(true); // Re-show if dismissed before unlock
+    }
+  }, [hasUnlockedDarkMode]);
 
   // If the banner unmounts while preview is active (navigation / dismiss), restore immediately
   useEffect(() => {
-    return () => {
+    // If it becomes hidden while in demo mode, end the preview immediately.
+    if (shouldHide && isDemoMode) {
       endPreview();
+    }
+    return () => {
+      // On unmount always ensure preview ends.
+      if (isDemoMode) endPreview();
     };
-  }, []);
+  }, [shouldHide, isDemoMode, endPreview]);
+
+  if (shouldHide) return null;
 
   return (
     <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border-b border-indigo-500/20 dark:from-indigo-500/5 dark:via-purple-500/5 dark:to-pink-500/5 dark:border-indigo-500/30">
@@ -79,11 +117,11 @@ export function DarkModeUnlockBanner() {
             <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 leading-relaxed">
               Earn{" "}
               <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                500 XP
+                {XP_THRESHOLD} XP
               </span>{" "}
               to unlock Dark Mode. Invite friends (
               <span className="font-semibold">
-                {referralsNeeded} referrals = 500 XP
+                {referralsNeeded} referrals = {XP_THRESHOLD} XP
               </span>
               ) or add / edit tricks. You have{" "}
               <span className="font-semibold text-indigo-600 dark:text-indigo-400">
@@ -131,22 +169,29 @@ export function DarkModeUnlockBanner() {
                   <div
                     className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-500 ease-out"
                     style={{
-                      width: `${Math.min(100, (xpProgress / 500) * 100)}%`,
+                      width: `${Math.min(
+                        100,
+                        (xpProgress / XP_THRESHOLD) * 100
+                      )}%`,
                     }}
                     aria-hidden="true"
                   />
                 </div>
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 tabular-nums w-10 text-right">
-                  {Math.min(100, Math.round((xpProgress / 500) * 100))}%
+                  {Math.min(100, Math.round((xpProgress / XP_THRESHOLD) * 100))}
+                  %
                 </span>
               </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Each referral: {XP_PER_REFERRAL} XP
+              </p>
             </div>
           </div>
 
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsVisible(false)}
+            onClick={handleDismiss}
             className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 p-1 h-auto"
           >
             <X className="h-3 w-3" />
