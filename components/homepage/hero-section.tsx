@@ -102,7 +102,10 @@ export function HeroSection({
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuItem asChild>
-                  <Link href="/explore" className="font-medium text-primary">
+                  <Link
+                    href="/sports-and-disciplines"
+                    className="font-medium text-primary"
+                  >
                     View All
                   </Link>
                 </DropdownMenuItem>
