@@ -5,21 +5,38 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+// (Card components removed for compact row layout)
 import { Badge } from "@/components/ui/badge";
 import {
   getAllMasterCategories,
   deleteMasterCategory,
+  bulkUpdateMasterCategoryOrder,
   type MasterCategory,
 } from "@/lib/client/categories-data-client";
-import { Plus, Search, Edit, Trash2, Eye, EyeOff } from "lucide-react";
-import * as Icons from "lucide-react";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+  SettingsIcon,
+} from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +50,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CategoryFormDialog } from "@/components/category-form-dialog";
 import Link from "next/link";
+import { iconMap } from "@/components/side-nav";
+
+// Helper to map stored icon names to Lucide components
+function getIconComponent(iconName: string): React.ComponentType<any> {
+  return iconMap[iconName];
+}
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<MasterCategory[]>([]);
@@ -43,6 +66,8 @@ export default function AdminCategoriesPage() {
     null
   );
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const sensors = useSensors(useSensor(PointerSensor));
 
   useEffect(() => {
     loadCategories();
@@ -94,14 +119,55 @@ export default function AdminCategoriesPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const getIconComponent = (iconName: string) => {
-    const iconMap: Record<string, React.ComponentType<any>> = {
-      zap: Icons.Zap,
-      "rotate-ccw": Icons.RotateCcw,
-      activity: Icons.Activity,
-      bounce: Icons.Zap,
-    };
-    return iconMap[iconName] || Icons.Circle;
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = filteredCategories.findIndex(
+      (c) => c.id === String(active.id)
+    );
+    const newIndex = filteredCategories.findIndex(
+      (c) => c.id === String(over.id)
+    );
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Reorder within filtered list then map back to full list preserving unfiltered items order
+    const reorderedFiltered = arrayMove(filteredCategories, oldIndex, newIndex);
+    const reorderedAll = categories
+      .slice()
+      .sort((a, b) => {
+        const ai = reorderedFiltered.findIndex((r) => r.id === a.id);
+        const bi = reorderedFiltered.findIndex((r) => r.id === b.id);
+        if (ai === -1 && bi === -1) return a.sort_order - b.sort_order; // neither filtered
+        if (ai === -1) return 1; // put unfiltered after filtered to avoid destabilizing relative order
+        if (bi === -1) return -1;
+        return ai - bi;
+      })
+      .map((c, i) => ({ ...c, sort_order: i + 1 }));
+
+    const original = categories;
+    setCategories(reorderedAll);
+
+    // Determine changed rows
+    const changed = reorderedAll.filter(
+      (c, i) =>
+        c.id !== original[i]?.id || c.sort_order !== original[i]?.sort_order
+    );
+    if (changed.length === 0) return;
+    setSavingOrder(true);
+    try {
+      await bulkUpdateMasterCategoryOrder(
+        changed.map((c) => ({ id: c.id, sort_order: c.sort_order }))
+      );
+    } catch (err) {
+      console.error(
+        "Failed to persist master category order, rolling back",
+        err
+      );
+      setCategories(original);
+    } finally {
+      setSavingOrder(false);
+    }
   };
 
   return (
@@ -145,7 +211,7 @@ export default function AdminCategoriesPage() {
             ) : (
               <Eye className="h-4 w-4" />
             )}
-            {showInactive ? "Hide Inactive" : "Show Inactive"}
+            {showInactive ? "Hide Unlisted" : "Show All"}
           </Button>
         </div>
 
@@ -155,101 +221,31 @@ export default function AdminCategoriesPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCategories.map((category) => {
-              const IconComponent = getIconComponent(
-                category.icon_name || "circle"
-              );
-              return (
-                <Card
-                  key={category.id}
-                  className={`${!category.is_active ? "opacity-60" : ""}`}
-                >
-                  <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between">
-                      <div
-                        className="w-12 h-12 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: category.color || "" }}
-                      >
-                        <IconComponent className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={category.is_active ? "default" : "secondary"}
-                        >
-                          {category.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </div>
-                    </div>
-                    <CardTitle className="text-xl">{category.name}</CardTitle>
-                    <CardDescription className="text-sm">
-                      {category.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="text-sm text-muted-foreground">
-                        <span className="font-medium">Slug:</span>{" "}
-                        {category.slug}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        <span className="font-medium">Order:</span>{" "}
-                        {category.sort_order}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(category)}
-                        className="flex-1"
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
-                      <Link href={`/admin/${category.slug}`}>
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <Edit className="h-4 w-4 mr-2" />
-                          Trick Categories
-                        </Button>
-                      </Link>
-
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive hover:text-destructive bg-transparent"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Category</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete &quot;
-                              {category.name}
-                              &quot;? This action cannot be undone and will
-                              affect all associated subcategories and tricks.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(category.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={filteredCategories.map((c) => c.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-1">
+                {filteredCategories.map((category) => (
+                  <SortableCategoryCard
+                    key={category.id}
+                    category={category}
+                    onEdit={() => handleEdit(category)}
+                    onDelete={() => handleDelete(category.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+        {savingOrder && (
+          <div className="text-xs text-muted-foreground mt-2 animate-pulse">
+            Saving order…
           </div>
         )}
 
@@ -278,6 +274,122 @@ export default function AdminCategoriesPage() {
         open={isFormOpen}
         onClose={handleFormClose}
       />
+    </div>
+  );
+}
+
+function SortableCategoryCard({
+  category,
+  onEdit,
+  onDelete,
+}: {
+  category: MasterCategory;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: category.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  const IconComponent = getIconComponent(category.icon_name || "circle");
+  const rawStatus = String(category.status || "");
+  const isHidden = rawStatus === "hidden" || !category.is_active;
+  const isBeta =
+    !isHidden && ["in-progress", "in_progress"].includes(rawStatus);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group flex items-center gap-3 rounded-md border bg-card px-3 py-2 shadow-sm hover:bg-accent/30 transition-colors text-sm `}
+    >
+      {/* Drag Handle */}
+      <button
+        className="cursor-grab active:cursor-grabbing flex items-center pr-2 text-muted-foreground hover:text-foreground"
+        {...listeners}
+        {...attributes}
+        aria-label="Drag to reorder"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 20 20"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="opacity-70"
+        >
+          <circle cx="5" cy="5" r="1.5" fill="currentColor" />
+          <circle cx="5" cy="10" r="1.5" fill="currentColor" />
+          <circle cx="5" cy="15" r="1.5" fill="currentColor" />
+          <circle cx="10" cy="5" r="1.5" fill="currentColor" />
+          <circle cx="10" cy="10" r="1.5" fill="currentColor" />
+          <circle cx="10" cy="15" r="1.5" fill="currentColor" />
+        </svg>
+      </button>
+
+      {/* Icon */}
+      <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0">
+        <IconComponent className="h-5 w-5 " />
+      </div>
+
+      {/* Main Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium truncate max-w-[160px] md:max-w-[240px]">
+            {category.name}
+          </span>
+          <Badge variant="outline" className="font-mono lowercase">
+            /{category.slug}
+          </Badge>
+          {/* Status / Visibility Badges */}
+          {isBeta && (
+            <Badge className="bg-amber-500/20 text-amber-700 border border-amber-400 font-medium">
+              Beta
+            </Badge>
+          )}
+          {isHidden && (
+            <Badge
+              variant="secondary"
+              className="font-mono tracking-wide uppercase"
+            >
+              Unlisted
+            </Badge>
+          )}
+
+          <span className="text-xs text-muted-foreground">
+            #{category.sort_order}
+          </span>
+        </div>
+        {category.description && (
+          <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+            {category.description}
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onEdit}
+          className="h-7 px-2"
+        >
+          <Edit className="h-3.5 w-3.5" />
+        </Button>
+        <Link href={`/admin/${category.slug}`}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2"
+            title="Manage Trick Categories"
+          >
+            <SettingsIcon className="h-3.5 w-3.5" />
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }

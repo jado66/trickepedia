@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+// Switch removed in favor of unified status select
 import {
   Dialog,
   DialogContent,
@@ -63,9 +63,7 @@ export function CategoryFormDialog({
     name: "",
     description: "",
     slug: "",
-    icon_name: "circle",
-    color: "#164e63",
-    sort_order: 1,
+    status: "active" as "active" | "in_progress" | "hidden",
     is_active: true,
   });
   const [loading, setLoading] = useState(false);
@@ -77,9 +75,7 @@ export function CategoryFormDialog({
         name: category.name,
         description: category.description ?? "",
         slug: category.slug,
-        icon_name: category.icon_name ?? "",
-        color: category.color ?? "",
-        sort_order: category.sort_order,
+        status: category.status ?? (category.is_active ? "active" : "hidden"),
         is_active: category.is_active,
       });
     } else {
@@ -87,9 +83,7 @@ export function CategoryFormDialog({
         name: "",
         description: "",
         slug: "",
-        icon_name: "circle",
-        color: "#164e63",
-        sort_order: 1,
+        status: "active",
         is_active: true,
       });
     }
@@ -121,11 +115,15 @@ export function CategoryFormDialog({
     setLoading(true);
 
     try {
-      if (category) {
-        await updateMasterCategory(category.id, formData);
-      } else {
-        await createMasterCategory(formData);
-      }
+      const payload = {
+        name: formData.name.trim(),
+        description: formData.description.trim() || null,
+        slug: formData.slug.trim(),
+        status: formData.status,
+        is_active: formData.status !== "hidden",
+      } as any;
+      if (category) await updateMasterCategory(category.id, payload);
+      else await createMasterCategory(payload);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -196,86 +194,30 @@ export function CategoryFormDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="icon">Icon</Label>
-              <Select
-                value={formData.icon_name}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({ ...prev, icon_name: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {iconOptions.map((icon) => (
-                    <SelectItem key={icon.value} value={icon.value}>
-                      {icon.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="color">Color</Label>
-              <Select
-                value={formData.color}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({ ...prev, color: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {colorOptions.map((color) => (
-                    <SelectItem key={color.value} value={color.value}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: color.color }}
-                        />
-                        {color.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="sort_order">Sort Order</Label>
-              <Input
-                id="sort_order"
-                type="number"
-                min="1"
-                value={formData.sort_order}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    sort_order: Number.parseInt(e.target.value) || 1,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="is_active">Status</Label>
-              <div className="flex items-center space-x-2 pt-2">
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, is_active: checked }))
-                  }
-                />
-                <Label htmlFor="is_active" className="text-sm">
-                  {formData.is_active ? "Active" : "Inactive"}
-                </Label>
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value: any) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  status: value,
+                  is_active: value !== "hidden",
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="in_progress">Beta</SelectItem>
+                <SelectItem value="hidden">Hidden</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Active & Beta will be publicly visible; Hidden will not.
+            </p>
           </div>
 
           <DialogFooter>

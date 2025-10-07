@@ -1,29 +1,34 @@
 "use client";
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Plus, Check, X } from "lucide-react";
-import Link from "next/link";
+import { useState, useMemo } from "react";
+import { Check, CheckCircle2 } from "lucide-react";
 import { MasterCategory } from "../skill-tree.types";
+import { iconMap } from "../side-nav/icon-map";
+
+// Some callers include a `status` (e.g. "in_progress") used to show a Beta badge.
+type CategoryWithStatus = MasterCategory & { status?: string | null };
 
 interface SportsSelectionProps {
-  categories: MasterCategory[];
+  categories: CategoryWithStatus[];
   userSportsIds: string[];
   onToggleSport: (categoryId: string) => Promise<void> | void;
   onFinish: () => void;
   loading?: boolean;
 }
 
-const iconMap: Record<string, any> = {};
 const getCategoryIcon = (iconName?: string | null) => {
-  const key = iconName?.toLowerCase();
-  const Icon = key ? iconMap[key] : undefined;
-  return Icon || CheckCircle2; // fallback icon
+  if (!iconName) return iconMap.circle || CheckCircle2;
+  // Support both exact, lowercase, kebab & camel case lookups
+  const direct = iconMap[iconName];
+  if (direct) return direct;
+  const lower = iconName.toLowerCase();
+  if (iconMap[lower]) return iconMap[lower];
+  // Convert kebab to camel
+  const camel = lower.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  if (iconMap[camel]) return iconMap[camel];
+  return iconMap.circle || CheckCircle2;
 };
 
 export function SportsSelection({
@@ -32,6 +37,7 @@ export function SportsSelection({
   onToggleSport,
   onFinish,
 }: SportsSelectionProps) {
+  const [showHidden, setShowHidden] = useState(false);
   const allSelected =
     categories.length > 0 && userSportsIds.length === categories.length;
 
@@ -48,6 +54,19 @@ export function SportsSelection({
     }
   };
 
+  const visibleCategories = useMemo(
+    () =>
+      showHidden
+        ? categories
+        : categories.filter((c) =>
+            // Prefer explicit is_active if present, else infer from status
+            (c as any).is_active !== undefined
+              ? (c as any).is_active
+              : c.status !== "hidden"
+          ),
+    [categories, showHidden]
+  );
+
   return (
     <div className="px-4">
       <div className="mb-4 flex flex-col md:flex-row md:items-end md:justify-between gap-4 ">
@@ -62,6 +81,14 @@ export function SportsSelection({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowHidden((v) => !v)}
+            className="order-2 md:order-none"
+          >
+            {showHidden ? "Hide Unlisted" : "Show Unlisted"}
+          </Button>
           {userSportsIds.length > 0 && (
             <Button size="sm" onClick={onFinish}>
               Continue
@@ -75,9 +102,11 @@ export function SportsSelection({
         role="list"
         aria-label="Sports categories multi-select"
       >
-        {categories.map((category) => {
+        {visibleCategories.map((category) => {
           const isSelected = userSportsIds.includes(category.id);
           const Icon = getCategoryIcon(category.icon_name);
+          const isHidden =
+            (category as any).is_active === false || category.status === "hidden";
           return (
             <Card
               key={category.id}
@@ -98,21 +127,23 @@ export function SportsSelection({
               <CardHeader className="pr-10">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div
-                      className="p-2 rounded-lg"
-                      style={{
-                        backgroundColor: (category.color || "#ccc") + "20",
-                      }}
-                    >
-                      <Icon
-                        className="h-6 w-6"
-                        style={{ color: category.color }}
-                      />
+                    <div className="p-2 rounded-lg bg-muted/40">
+                      <Icon className="h-6 w-6 text-foreground/70" />
                     </div>
                     <div>
                       <CardTitle className="text-base font-semibold leading-tight">
                         {category.name}
                       </CardTitle>
+                      {category.status === "in_progress" && (
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300 tracking-wide">
+                          BETA
+                        </span>
+                      )}
+                      {showHidden && isHidden && (
+                        <span className="inline-block mt-1 ml-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground border border-border tracking-wide">
+                          UNLISTED
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -135,10 +166,20 @@ export function SportsSelection({
       </div>
 
       <div className="flex flex-wrap gap-3 items-center justify-between text-sm">
-        <div className="text-muted-foreground">
-          {userSportsIds.length === 0
-            ? "No sports selected"
-            : `${userSportsIds.length} selected`}
+        <div className="text-muted-foreground flex items-center gap-2">
+          <span>
+            {userSportsIds.length === 0
+              ? "No sports selected"
+              : `${userSportsIds.length} selected`}
+          </span>
+          {!showHidden &&
+            categories.some(
+              (c) => (c as any).is_active === false || c.status === "hidden"
+            ) && (
+              <span className="text-[11px] px-2 py-0.5 rounded bg-muted">
+                Hidden filtered
+              </span>
+            )}
         </div>
       </div>
     </div>

@@ -12,6 +12,7 @@ export interface MasterCategory {
   created_at: string;
   updated_at: string;
   trick_count?: number;
+  status?: "active" | "in_progress" | "hidden";
 }
 // Get master category by slug
 export async function getMasterCategoryBySlug(
@@ -127,12 +128,66 @@ export async function updateMasterCategory(
     .update(updateData)
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error updating master category:", error);
     throw new Error("Failed to update master category");
   }
 
+  if (!updatedCategory) {
+    // Distinguish between not found vs RLS prevented visibility
+    console.warn(
+      "Update returned zero rows (possible causes: invalid ID, row-level security blocked the row, or no changes).",
+      { id }
+    );
+    throw new Error(
+      "Category not updated. It may not exist or you may lack permission."
+    );
+  }
+
   return updatedCategory;
+}
+
+// Bulk update master category sort orders via RPC (expects array of {id, sort_order})
+export async function bulkUpdateMasterCategoryOrder(
+  items: { id: string; sort_order: number }[]
+): Promise<void> {
+  if (items.length === 0) return;
+  const payload = items.map((i) => ({ id: i.id, sort_order: i.sort_order }));
+  const { error } = await supabase.rpc("bulk_reorder_master_categories", {
+    p: payload,
+  });
+  if (error) {
+    console.error("Error bulk updating master category order via RPC", error);
+    throw new Error("Failed to reorder master categories");
+  }
+}
+
+// Optional: safer update that distinguishes not-found vs permission vs success
+export async function safeUpdateMasterCategory(
+  id: string,
+  data: Partial<MasterCategory>
+): Promise<MasterCategory> {
+  // First attempt to see if row is visible
+  const { data: existing, error: fetchError } = await supabase
+    .from("master_categories")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchError) {
+    console.error("Pre-update fetch failed", fetchError);
+    // Continue anyway—could be RLS; attempt update to get consistent behavior
+  }
+
+  if (!existing) {
+    // Could be truly missing or hidden by RLS.
+    console.warn(
+      "Category not visible before update (may not exist or RLS blocks). Proceeding with update attempt.",
+      { id }
+    );
+  }
+
+  return updateMasterCategory(id, data);
 }
