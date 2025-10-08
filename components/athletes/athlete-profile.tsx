@@ -16,7 +16,6 @@ import {
   Globe,
   Users,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import type { Athlete, SocialMediaPlatform } from "@/lib/types/athlete";
 
@@ -111,17 +110,16 @@ export function AthleteProfile({ athlete }: AthleteProfileProps) {
       {/* Hero Section */}
       <div className="relative h-[60vh] min-h-[500px] overflow-hidden">
         {athlete.cover_image_url ? (
-          <Image
+          <img
             src={athlete.cover_image_url || "/placeholder.svg"}
             alt={athlete.name}
-            fill
-            className="object-cover"
-            priority
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="eager"
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
 
         {/* Hero Content */}
         <div className="absolute inset-0 flex items-end">
@@ -130,11 +128,11 @@ export function AthleteProfile({ athlete }: AthleteProfileProps) {
               {/* Profile Image */}
               {athlete.profile_image_url && (
                 <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-lg overflow-hidden border-4 border-background shadow-2xl">
-                  <Image
+                  <img
                     src={athlete.profile_image_url || "/placeholder.svg"}
                     alt={athlete.name}
-                    fill
-                    className="object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="eager"
                   />
                 </div>
               )}

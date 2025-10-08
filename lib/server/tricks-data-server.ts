@@ -142,7 +142,27 @@ export async function getTrickBySlug(
     if (error.code === "PGRST116") {
       return null; // No rows returned
     }
-    console.error("Error fetching trick by slug:", error);
+
+    const errorMessage = error.message || String(error);
+    const isFetchError =
+      errorMessage.includes("fetch failed") ||
+      errorMessage.includes("ECONNREFUSED");
+
+    console.error("Error fetching trick by slug:", {
+      message: errorMessage,
+      details: error.stack || error,
+      hint: isFetchError
+        ? "⚠️  VPN ISSUE? If you're connected to a VPN, try disconnecting it."
+        : "",
+      code: error.code || "",
+    });
+
+    if (isFetchError && process.env.NODE_ENV === "development") {
+      console.log(
+        "\n🚨 VPN/CONNECTION ERROR - Check your network connection or disable VPN 🚨\n"
+      );
+    }
+
     throw new Error("Failed to fetch trick");
   }
 

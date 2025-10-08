@@ -36,16 +36,19 @@ export function AthleteCard({ athlete }: AthleteCardProps) {
         {/* Background Image */}
         <div className="absolute inset-0">
           {athlete.profile_image_url ? (
-            <Image
-              src={athlete.profile_image_url || "/placeholder.svg"}
+            <img
+              src={athlete.profile_image_url}
               alt={athlete.name}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              loading="lazy"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              // onError={(e) => {
+              //   (e.currentTarget as HTMLImageElement).src = "/placeholder.svg";
+              // }}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
         </div>
 
         {/* Status Badge */}

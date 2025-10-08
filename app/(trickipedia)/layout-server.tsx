@@ -81,7 +81,29 @@ async function getNavigationData(): Promise<NavigationCategory[]> {
 
     return transformedCategories;
   } catch (error) {
-    console.error("Unexpected error fetching navigation:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isFetchError =
+      errorMessage.includes("fetch failed") ||
+      errorMessage.includes("ECONNREFUSED");
+
+    console.error("Error fetching navigation data:", {
+      message: errorMessage,
+      details: error instanceof Error ? error.stack : error,
+      hint: isFetchError
+        ? "⚠️  VPN ISSUE? If you're connected to a VPN, try disconnecting it. VPNs can block Supabase connections."
+        : "",
+      code: (error as any)?.code || "",
+    });
+
+    if (isFetchError && process.env.NODE_ENV === "development") {
+      console.log("\n🚨 CONNECTION ERROR DETECTED 🚨");
+      console.log("💡 Common causes:");
+      console.log("   1. VPN is blocking Supabase connection (most common)");
+      console.log("   2. Firewall or antivirus blocking requests");
+      console.log("   3. Network connectivity issues");
+      console.log("   4. Supabase instance is down\n");
+    }
+
     return [];
   }
 }

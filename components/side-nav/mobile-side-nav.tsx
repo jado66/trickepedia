@@ -121,13 +121,7 @@ export function MobileSideNav({ onItemClick }: { onItemClick?: () => void }) {
   return (
     <div className="block sm:hidden flex h-full flex-col">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-4">
-        <Link
-          href="/"
-          className="flex items-center gap-3"
-          onClick={onItemClick}
-        >
-          <TrickipediaLogo />
-        </Link>
+        <TrickipediaLogo />
       </div>
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="flex flex-col gap-2">

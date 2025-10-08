@@ -46,7 +46,26 @@ async function getAthletes(searchParams: {
   const { data: athletes, error } = await query;
 
   if (error) {
-    console.error("Error fetching athletes:", error);
+    const errorMessage = error.message || String(error);
+    const isFetchError =
+      errorMessage.includes("fetch failed") ||
+      errorMessage.includes("ECONNREFUSED");
+
+    console.error("Error fetching athletes:", {
+      message: errorMessage,
+      details: error.stack || error,
+      hint: isFetchError
+        ? "⚠️  VPN ISSUE? If you're connected to a VPN, try disconnecting it."
+        : "",
+      code: error.code || "",
+    });
+
+    if (isFetchError && process.env.NODE_ENV === "development") {
+      console.log(
+        "\n🚨 VPN/CONNECTION ERROR - Check your network connection or disable VPN 🚨\n"
+      );
+    }
+
     return [];
   }
 

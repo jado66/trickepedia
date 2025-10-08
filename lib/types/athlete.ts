@@ -1,10 +1,4 @@
-export type SkillLevel =
-  | "beginner"
-  | "intermediate"
-  | "advanced"
-  | "professional"
-  | "elite";
-export type AthleteStatus = "active" | "retired" | "inactive";
+export type AthleteStatus = "active" | "retired" | "injured" | "inactive";
 
 export type SocialMediaPlatform =
   | "instagram"
@@ -20,7 +14,31 @@ export type SocialMediaPlatform =
 export interface SocialLink {
   platform: SocialMediaPlatform;
   url: string;
-  label?: string; // Optional label for "other" or multiple accounts
+  label?: string;
+  follower_count?: number;
+}
+
+export interface TimelineSection {
+  id: string;
+  title: string;
+  year?: string;
+  date_range?: string;
+  content: string;
+  order: number;
+}
+
+export interface VideoEmbed {
+  id: string;
+  platform: "youtube" | "instagram";
+  url: string;
+  title?: string;
+  thumbnail_url?: string;
+}
+
+export interface PrimaryCTA {
+  text: string;
+  url: string;
+  platform?: SocialMediaPlatform;
 }
 
 export interface Athlete {
@@ -31,12 +49,6 @@ export interface Athlete {
   bio?: string;
   profile_image_url?: string;
   cover_image_url?: string;
-  sport_category_ids?: string[];
-  sport_categories?: Array<{
-    id: string;
-    name: string;
-    slug: string;
-  }>;
   status: AthleteStatus;
   years_experience?: number;
   country?: string;
@@ -45,16 +57,29 @@ export interface Athlete {
   height_cm?: number;
   weight_kg?: number;
   stance?: string;
-  social_links?: SocialLink[];
   notable_achievements?: string;
+  sponsors?: string[];
+  social_links?: SocialLink[];
   signature_trick_ids?: string[];
+  sport_category_ids?: string[];
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+
+  // New fields
+  timeline_sections?: TimelineSection[];
+  video_embeds?: VideoEmbed[];
+  primary_cta?: PrimaryCTA;
+
+  // Relations
   signature_tricks?: Array<{
     id: string;
     name: string;
     slug: string;
   }>;
-  sponsors?: string[];
-  created_at: string;
-  updated_at: string;
-  created_by?: string;
+  sport_categories?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+  }>;
 }
