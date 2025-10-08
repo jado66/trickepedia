@@ -35,6 +35,7 @@ export const metadata: Metadata = {
 };
 
 import "./globals.css";
+import { WishlistProvider } from "@/contexts/wishlist-context";
 
 export default async function RootLayout({
   children,
@@ -99,9 +100,11 @@ export default async function RootLayout({
           <UserProvider>
             <CategoriesProvider>
               <TricksProvider>
-                <UserProgressProvider>
-                  <NotificationsProvider>{children}</NotificationsProvider>
-                </UserProgressProvider>
+                <WishlistProvider>
+                  <UserProgressProvider>
+                    <NotificationsProvider>{children}</NotificationsProvider>
+                  </UserProgressProvider>
+                </WishlistProvider>
               </TricksProvider>
             </CategoriesProvider>
           </UserProvider>

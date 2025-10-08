@@ -34,176 +34,6 @@ export interface Trick {
   prerequisites: string[]; // Array of trick IDs
 }
 
-export const mockTricks: Trick[] = [
-  // Parkour tricks
-  {
-    id: "safety-roll",
-    name: "Safety Roll",
-    sport: "parkour",
-    difficulty: "beginner",
-    description: "Basic roll to absorb impact safely",
-    prerequisites: [],
-  },
-  {
-    id: "precision-jump",
-    name: "Precision Jump",
-    sport: "parkour",
-    difficulty: "beginner",
-    description: "Accurate jump from one point to another",
-    prerequisites: [],
-  },
-  {
-    id: "vault-step",
-    name: "Step Vault",
-    sport: "parkour",
-    difficulty: "beginner",
-    description: "Basic vault using one hand and stepping over",
-    prerequisites: ["precision-jump"],
-  },
-  {
-    id: "kong-vault",
-    name: "Kong Vault",
-    sport: "parkour",
-    difficulty: "intermediate",
-    description: "Diving vault using both hands",
-    prerequisites: ["vault-step", "safety-roll"],
-  },
-  {
-    id: "double-kong",
-    name: "Double Kong",
-    sport: "parkour",
-    difficulty: "advanced",
-    description: "Two consecutive kong vaults",
-    prerequisites: ["kong-vault"],
-  },
-
-  // Tricking
-  {
-    id: "cartwheel",
-    name: "Cartwheel",
-    sport: "tricking",
-    difficulty: "beginner",
-    description: "Basic sideways rotation",
-    prerequisites: [],
-  },
-  {
-    id: "round-off",
-    name: "Round Off",
-    sport: "tricking",
-    difficulty: "beginner",
-    description: "Cartwheel with both feet landing together",
-    prerequisites: ["cartwheel"],
-  },
-  {
-    id: "back-handspring",
-    name: "Back Handspring",
-    sport: "tricking",
-    difficulty: "intermediate",
-    description: "Backward flip landing on hands then feet",
-    prerequisites: ["round-off"],
-  },
-  {
-    id: "back-flip",
-    name: "Back Flip",
-    sport: "tricking",
-    difficulty: "intermediate",
-    description: "Backward somersault in the air",
-    prerequisites: ["back-handspring"],
-  },
-  {
-    id: "double-back",
-    name: "Double Back",
-    sport: "tricking",
-    difficulty: "advanced",
-    description: "Two backward flips in succession",
-    prerequisites: ["back-flip"],
-  },
-
-  // Trampoline
-  {
-    id: "straight-jump",
-    name: "Straight Jump",
-    sport: "trampoline",
-    difficulty: "beginner",
-    description: "Basic controlled bounce",
-    prerequisites: [],
-  },
-  {
-    id: "seat-drop",
-    name: "Seat Drop",
-    sport: "trampoline",
-    difficulty: "beginner",
-    description: "Landing in seated position",
-    prerequisites: ["straight-jump"],
-  },
-  {
-    id: "front-drop",
-    name: "Front Drop",
-    sport: "trampoline",
-    difficulty: "intermediate",
-    description: "Landing on stomach",
-    prerequisites: ["seat-drop"],
-  },
-
-  // Freerunning
-  {
-    id: "wall-run",
-    name: "Wall Run",
-    sport: "freerunning",
-    difficulty: "beginner",
-    description: "Running up a vertical wall",
-    prerequisites: [],
-  },
-  {
-    id: "tic-tac",
-    name: "Tic Tac",
-    sport: "freerunning",
-    difficulty: "intermediate",
-    description: "Using wall to redirect momentum",
-    prerequisites: ["wall-run"],
-  },
-  {
-    id: "triple-full",
-    name: "Triple Full",
-    sport: "freerunning",
-    difficulty: "advanced",
-    description: "Three full twists in the air",
-    prerequisites: ["back-flip"],
-  },
-  {
-    id: "gainer-full",
-    name: "Gainer Full",
-    sport: "freerunning",
-    difficulty: "intermediate",
-    description: "Backward flip with a full twist",
-    prerequisites: ["front-drop"],
-  },
-  {
-    id: "540-dive-roll",
-    name: "540 Dive Roll",
-    sport: "freerunning",
-    difficulty: "intermediate",
-    description: "Backward flip with a full twist",
-    prerequisites: ["front-drop"],
-  },
-];
-
-export const mockUserProgress: UserProgress = {
-  userId: "user-1",
-  masteredTricks: [
-    "safety-roll",
-    "precision-jump",
-    "vault-step",
-    "cartwheel",
-    "round-off",
-    "straight-jump",
-    "seat-drop",
-    "wall-run",
-  ],
-  wishlist: ["double-back", "triple-full", "gainer-full", "540-dive-roll"],
-  recentlyViewed: ["back-handspring", "front-drop", "double-back"],
-};
-
 export function Wishlist() {
   const {
     items,
@@ -299,9 +129,14 @@ export function Wishlist() {
               <Heart className="w-5 h-5 text-red-500" />
               Goal Tricks
             </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
+            {/* Desktop description */}
+            <p className="hidden sm:block text-sm text-muted-foreground mt-1">
               Track the tricks you want to master next. When you complete a
               trick, we&apos;ll remove it automatically.
+            </p>
+            {/* Mobile concise description */}
+            <p className="sm:hidden text-xs text-muted-foreground mt-1">
+              Pick goals & we&apos;ll clear them once mastered.
             </p>
           </div>
           <Dialog
@@ -319,7 +154,7 @@ export function Wishlist() {
                 Add Trick
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[650px] flex flex-col max-h-[90vh] overflow-visible">
+            <DialogContent className="w-[95vw] sm:w-auto sm:max-w-[650px] flex flex-col max-h-[90vh] overflow-visible">
               <DialogHeader className="shrink-0">
                 <DialogTitle>Add Tricks to Wishlist</DialogTitle>
                 <DialogDescription>
@@ -327,7 +162,7 @@ export function Wishlist() {
                   wishlist
                 </DialogDescription>
               </DialogHeader>
-              <div className="py-4 flex-1 min-h-[400px] overflow-visible relative">
+              <div className="py-4 flex-1 min-h-[300px] sm:min-h-[400px] overflow-visible relative">
                 <TrickSearch
                   mode="select"
                   variant="default"
@@ -393,11 +228,13 @@ export function Wishlist() {
                 <div
                   key={trick.id}
                   ref={ref as any}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <div className="space-y-1 flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium truncate">{trick.name}</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-medium truncate max-w-[200px] sm:max-w-none">
+                        {trick.name}
+                      </h3>
                       {trick.subcategory?.master_category?.name && (
                         <Badge
                           variant="outline"
@@ -408,26 +245,30 @@ export function Wishlist() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-2">
+                  <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto justify-end sm:justify-start">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleViewTrick(trick)}
+                      className="px-2 sm:px-3"
                     >
-                      View <ArrowRight className="w-4 h-4 ml-1" />
+                      <span className="hidden xs:inline">View</span>
+                      <ArrowRight className="w-4 h-4 ml-0 xs:ml-1" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label={`Remove ${trick.name} from wishlist`}
                       disabled={removing[trick.id]}
                       onClick={() => handleRemoveFromWishlist(trick.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 px-2 sm:px-3"
                     >
                       {removing[trick.id] ? (
                         <div className="animate-spin h-4 w-4 rounded-full border-[2px] border-red-500/30 border-t-red-500" />
                       ) : (
                         <X className="w-4 h-4" />
                       )}
+                      <span className="sr-only">Remove</span>
                     </Button>
                   </div>
                 </div>
@@ -435,8 +276,12 @@ export function Wishlist() {
             })}
             {hasMore && (
               <div className="pt-2 border-t">
-                <Button variant="outline" className="w-full bg-transparent">
-                  View All ({wishlistTricks.length} tricks)
+                <Button
+                  variant="outline"
+                  className="w-full bg-transparent text-sm sm:text-base"
+                >
+                  View All ({wishlistTricks.length} trick
+                  {wishlistTricks.length === 1 ? "" : "s"})
                 </Button>
               </div>
             )}

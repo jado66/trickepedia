@@ -5,6 +5,8 @@ import { createServer } from "@/utils/supabase/server";
 
 async function getAthlete(slug: string): Promise<Athlete | null> {
   const supabaseServer = createServer();
+
+  // First, get the athlete data
   const { data: athlete, error } = await supabaseServer
     .from("athletes")
     .select("*")
@@ -13,7 +15,32 @@ async function getAthlete(slug: string): Promise<Athlete | null> {
     .single();
 
   if (error || !athlete) {
+    console.error("Error fetching athlete by slug:", error);
     return null;
+  }
+
+  // Fetch related sport categories if they exist
+  if (athlete.sport_category_ids && athlete.sport_category_ids.length > 0) {
+    const { data: categories } = await supabaseServer
+      .from("master_categories")
+      .select("id, name, slug")
+      .in("id", athlete.sport_category_ids);
+
+    if (categories) {
+      athlete.sport_categories = categories;
+    }
+  }
+
+  // Fetch related signature tricks if they exist
+  if (athlete.signature_trick_ids && athlete.signature_trick_ids.length > 0) {
+    const { data: tricks } = await supabaseServer
+      .from("tricks")
+      .select("id, name, slug")
+      .in("id", athlete.signature_trick_ids);
+
+    if (tricks) {
+      athlete.signature_tricks = tricks;
+    }
   }
 
   return athlete as Athlete;
@@ -33,11 +60,16 @@ export async function generateMetadata({
     };
   }
 
+  const sportCategories =
+    athlete.sport_categories?.map((c) => c.name).join(", ") || "Athlete";
+
   return {
-    title: `${athlete.name} - ${athlete.sport} Athlete | Trickipedia`,
+    title: `${athlete.name} - ${sportCategories} | Trickipedia`,
     description:
       athlete.bio ||
-      `${athlete.name} is a ${athlete.skill_level} ${athlete.sport} athlete on Trickipedia.`,
+      `${
+        athlete.name
+      } is a professional ${sportCategories.toLowerCase()} athlete on Trickipedia.`,
     openGraph: {
       title: athlete.name,
       description: athlete.bio,

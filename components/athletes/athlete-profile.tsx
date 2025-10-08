@@ -1,6 +1,9 @@
 "use client";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   MapPin,
   Calendar,
@@ -14,33 +17,69 @@ import {
   Weight,
   Star,
   Award,
+  Twitter,
+  Facebook,
+  Twitch,
+  MessageCircle,
+  Hash,
 } from "lucide-react";
 import Image from "next/image";
-// @ts-expect-error TODO
-import type { Athlete } from "@/types/athlete";
-// import { AthleteInteractions } from "@/components/athlete-interactions";
+import Link from "next/link";
+import type { Athlete, SocialMediaPlatform } from "@/lib/types/athlete";
 
 interface AthleteProfileProps {
   athlete: Athlete;
 }
 
+const getSocialIcon = (platform: SocialMediaPlatform) => {
+  const iconClass = "h-5 w-5";
+  switch (platform) {
+    case "instagram":
+      return <Instagram className={`${iconClass} text-pink-600`} />;
+    case "youtube":
+      return <Youtube className={`${iconClass} text-red-600`} />;
+    case "tiktok":
+      return <Hash className={`${iconClass} text-black dark:text-white`} />;
+    case "twitter":
+      return <Twitter className={`${iconClass} text-blue-500`} />;
+    case "facebook":
+      return <Facebook className={`${iconClass} text-blue-600`} />;
+    case "twitch":
+      return <Twitch className={`${iconClass} text-purple-600`} />;
+    case "discord":
+      return <MessageCircle className={`${iconClass} text-indigo-600`} />;
+    case "website":
+      return <Globe className={`${iconClass} text-blue-600`} />;
+    default:
+      return <Globe className={`${iconClass} text-gray-600`} />;
+  }
+};
+
+const getSocialLabel = (platform: SocialMediaPlatform) => {
+  switch (platform) {
+    case "instagram":
+      return "Instagram";
+    case "youtube":
+      return "YouTube";
+    case "tiktok":
+      return "TikTok";
+    case "twitter":
+      return "Twitter/X";
+    case "facebook":
+      return "Facebook";
+    case "twitch":
+      return "Twitch";
+    case "discord":
+      return "Discord";
+    case "website":
+      return "Website";
+    default:
+      return "Link";
+  }
+};
+
 export function AthleteProfile({ athlete }: AthleteProfileProps) {
-  const getSkillLevelColor = (level: string) => {
-    switch (level) {
-      case "beginner":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "intermediate":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-      case "advanced":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
-      case "professional":
-        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
-      case "elite":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
-    }
-  };
+  const [useImperial, setUseImperial] = useState(true);
 
   const calculateAge = (dateOfBirth: string) => {
     const today = new Date();
@@ -56,6 +95,25 @@ export function AthleteProfile({ athlete }: AthleteProfileProps) {
     }
 
     return age;
+  };
+
+  const cmToFeetInches = (cm: number) => {
+    const totalInches = cm / 2.54;
+    const feet = Math.floor(totalInches / 12);
+    const inches = Math.round(totalInches % 12);
+    return `${feet}'${inches}"`;
+  };
+
+  const kgToLbs = (kg: number) => {
+    return Math.round(kg * 2.20462);
+  };
+
+  const formatHeight = (cm: number) => {
+    return useImperial ? cmToFeetInches(cm) : `${cm} cm`;
+  };
+
+  const formatWeight = (kg: number) => {
+    return useImperial ? `${kgToLbs(kg)} lbs` : `${kg} kg`;
   };
 
   return (
@@ -104,15 +162,23 @@ export function AthleteProfile({ athlete }: AthleteProfileProps) {
                       <h1 className="text-3xl font-bold text-balance">
                         {athlete.name}
                       </h1>
-                      <Badge
-                        className={getSkillLevelColor(athlete.skill_level)}
-                      >
-                        {athlete.skill_level}
-                      </Badge>
                     </div>
-                    <p className="text-lg text-muted-foreground font-medium">
-                      {athlete.sport}
-                    </p>
+                    {athlete.sport_categories &&
+                      athlete.sport_categories.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {athlete.sport_categories.map((category) => (
+                            <Link
+                              key={category.id}
+                              href={`/${category.slug}`}
+                              className="hover:opacity-80 transition-opacity"
+                            >
+                              <Badge variant="secondary" className="text-sm">
+                                {category.name}
+                              </Badge>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                   </div>
 
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -174,10 +240,16 @@ export function AthleteProfile({ athlete }: AthleteProfileProps) {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {athlete.signature_tricks.map((trick, index) => (
-                    <Badge key={index} variant="secondary" className="text-sm">
-                      {trick}
-                    </Badge>
+                  {athlete.signature_tricks.map((trick) => (
+                    <Link
+                      key={trick.id}
+                      href={`/tricks/${trick.slug}`}
+                      className="hover:opacity-80 transition-opacity"
+                    >
+                      <Badge variant="secondary" className="text-sm">
+                        {trick.name}
+                      </Badge>
+                    </Link>
                   ))}
                 </div>
               </CardContent>
@@ -206,8 +278,23 @@ export function AthleteProfile({ athlete }: AthleteProfileProps) {
         <div className="space-y-6">
           {/* Stats */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <CardTitle>Stats</CardTitle>
+              <ToggleGroup
+                type="single"
+                value={useImperial ? "imperial" : "metric"}
+                onValueChange={(value) => {
+                  if (value) setUseImperial(value === "imperial");
+                }}
+                className="h-8"
+              >
+                <ToggleGroupItem value="imperial" className="h-8 text-xs px-3">
+                  Imperial
+                </ToggleGroupItem>
+                <ToggleGroupItem value="metric" className="h-8 text-xs px-3">
+                  Metric
+                </ToggleGroupItem>
+              </ToggleGroup>
             </CardHeader>
             <CardContent className="space-y-4">
               {athlete.height_cm && (
@@ -216,7 +303,9 @@ export function AthleteProfile({ athlete }: AthleteProfileProps) {
                     <Ruler className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">Height</span>
                   </div>
-                  <span className="font-medium">{athlete.height_cm} cm</span>
+                  <span className="font-medium">
+                    {formatHeight(athlete.height_cm)}
+                  </span>
                 </div>
               )}
 
@@ -226,7 +315,9 @@ export function AthleteProfile({ athlete }: AthleteProfileProps) {
                     <Weight className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">Weight</span>
                   </div>
-                  <span className="font-medium">{athlete.weight_kg} kg</span>
+                  <span className="font-medium">
+                    {formatWeight(athlete.weight_kg)}
+                  </span>
                 </div>
               )}
 
@@ -267,51 +358,32 @@ export function AthleteProfile({ athlete }: AthleteProfileProps) {
           )}
 
           {/* Social Links */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Connect</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {athlete.instagram_handle && (
-                <a
-                  href={`https://instagram.com/${athlete.instagram_handle}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors"
-                >
-                  <Instagram className="h-5 w-5 text-pink-600" />
-                  <span className="text-sm">@{athlete.instagram_handle}</span>
-                  <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
-                </a>
-              )}
-
-              {athlete.youtube_channel && (
-                <a
-                  href={`https://youtube.com/@${athlete.youtube_channel}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors"
-                >
-                  <Youtube className="h-5 w-5 text-red-600" />
-                  <span className="text-sm">@{athlete.youtube_channel}</span>
-                  <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
-                </a>
-              )}
-
-              {athlete.website_url && (
-                <a
-                  href={athlete.website_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors"
-                >
-                  <Globe className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm">Website</span>
-                  <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
-                </a>
-              )}
-            </CardContent>
-          </Card>
+          {athlete.social_links && athlete.social_links.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Connect</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {athlete.social_links.map((link, index) => (
+                  <a
+                    key={index}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors group"
+                  >
+                    {getSocialIcon(link.platform)}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-sm font-medium">
+                        {link.label || getSocialLabel(link.platform)}
+                      </span>
+                    </div>
+                    <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                  </a>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

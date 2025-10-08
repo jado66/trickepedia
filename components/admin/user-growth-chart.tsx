@@ -34,10 +34,28 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
   isLoading,
   className,
   lineColor,
-  areaOpacity = 0.18,
+  areaOpacity = 0.25,
 }) => {
   const effectiveLineColor = lineColor || "#16a34a";
-  const chartData = useMemo(() => data, [data]);
+  const chartData = useMemo(() => {
+    if (data.length === 0) return [];
+
+    // Find the earliest date (launch date)
+    const launchDate = new Date(data[0].date);
+
+    // Transform data to show days since launch
+    return data.map((point) => {
+      const currentDate = new Date(point.date);
+      const daysSinceLaunch = Math.floor(
+        (currentDate.getTime() - launchDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      return {
+        ...point,
+        daysSinceLaunch,
+      };
+    });
+  }, [data]);
 
   return (
     <Card className={cn("w-full", className)}>
@@ -51,7 +69,7 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
           <p className="text-sm text-muted-foreground">No user data yet.</p>
         ) : (
           <ChartContainer className="p-0 border-none shadow-none bg-transparent">
-            <ChartHeader description="Cumulative users by signup date" />
+            <ChartHeader description="Cumulative users by days since launch" />
             <div className="h-[240px] pt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
@@ -63,10 +81,16 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
                     stroke="hsl(var(--muted))"
                   />
                   <XAxis
-                    dataKey="date"
+                    dataKey="daysSinceLaunch"
                     tick={{ fontSize: 11 }}
                     tickMargin={8}
                     minTickGap={32}
+                    label={{
+                      value: "Days Since Launch",
+                      position: "insideBottom",
+                      offset: -5,
+                      style: { fontSize: 11 },
+                    }}
                   />
                   <YAxis
                     tick={{ fontSize: 11 }}
@@ -82,7 +106,7 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
                       borderRadius: 6,
                       fontSize: 12,
                     }}
-                    labelFormatter={(label) => `Date: ${label}`}
+                    labelFormatter={(label) => `Day ${label}`}
                     formatter={(value: any, name) => {
                       if (name === "cumulative") return [value, "Total Users"];
                       if (name === "daily") return [value, "New Users"];
@@ -96,6 +120,8 @@ export const UserGrowthChart: React.FC<UserGrowthChartProps> = ({
                       stroke="none"
                       fill={effectiveLineColor}
                       fillOpacity={areaOpacity}
+                      isAnimationActive={false}
+                      hide={true}
                     />
                   )}
                   <Line

@@ -25,6 +25,7 @@ import { TrickWithLinkedPrerequisites } from "@/types/trick";
 import { MoveTrickDialog } from "./move-trick-dialog";
 import { supabase } from "@/utils/supabase/client";
 import { useUser } from "@/contexts/user-provider";
+import { AddToGoalsButton } from "@/components/tricks/add-to-goals-button";
 
 interface ClientInteractionsProps {
   trick: TrickWithLinkedPrerequisites;
@@ -194,6 +195,8 @@ export function ClientInteractions({ trick }: ClientInteractionsProps) {
           {canDo ? "I Can Do This" : "Mark as Learned"}
         </Button>
 
+        <AddToGoalsButton trick={trick} />
+
         <Button variant="outline" size="sm" onClick={handleShare}>
           <Share2 className="h-4 w-4 mr-2" />
           Share
@@ -210,37 +213,37 @@ export function ClientInteractions({ trick }: ClientInteractionsProps) {
               </Link>
             </Button>
 
-            <MoveTrickDialog trick={trick} />
+            {/* <MoveTrickDialog trick={trick} /> */}
 
-            {/* <PermissionGate requireModerator> */}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive bg-transparent"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Trick</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete &quot;
-                    {trick.name}&quot;? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>
+            <PermissionGate requireModerator>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive bg-transparent"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
                     Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            {/* </PermissionGate> */}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Trick</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete &quot;
+                      {trick.name}&quot;? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </PermissionGate>
           </>
         )}
       </div>
