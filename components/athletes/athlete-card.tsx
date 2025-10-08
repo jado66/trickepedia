@@ -1,120 +1,115 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Calendar, Trophy } from "lucide-react";
+import { MapPin, Trophy } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-// @ts-expect-error TODO
-import type { Athlete } from "@/types/athlete";
+import type { Athlete } from "@/lib/types/athlete";
 
 interface AthleteCardProps {
   athlete: Athlete;
 }
 
-export function AthleteCard({ athlete }: AthleteCardProps) {
-  const getSkillLevelColor = (level: string) => {
-    switch (level) {
-      case "beginner":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "intermediate":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-      case "advanced":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
-      case "professional":
-        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
-      case "elite":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
-    }
+const getStatusBadge = (status: string) => {
+  const badges = {
+    active: {
+      label: "COMPETING",
+      className: "bg-primary text-primary-foreground",
+    },
+    retired: { label: "RETIRED", className: "bg-muted text-muted-foreground" },
+    injured: {
+      label: "INJURED",
+      className: "bg-destructive text-destructive-foreground",
+    },
+    inactive: {
+      label: "INACTIVE",
+      className: "bg-secondary text-secondary-foreground",
+    },
   };
+  return badges[status as keyof typeof badges] || badges.active;
+};
+
+export function AthleteCard({ athlete }: AthleteCardProps) {
+  const statusBadge = getStatusBadge(athlete.status);
 
   return (
-    <Link href={`/athletes/${athlete.slug}`}>
-      <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-        <div className="relative h-48 bg-gradient-to-br from-primary/10 to-secondary/10">
+    <Link href={`/athletes/${athlete.slug}`} className="group block">
+      <div className="relative h-80 overflow-hidden rounded-lg bg-card border border-border transition-all duration-300 hover:border-primary">
+        {/* Background Image */}
+        <div className="absolute inset-0">
           {athlete.profile_image_url ? (
             <Image
               src={athlete.profile_image_url || "/placeholder.svg"}
               alt={athlete.name}
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
             />
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center">
-                <span className="text-2xl font-bold text-primary">
-                  {athlete.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            </div>
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20" />
           )}
-          <div className="absolute top-3 right-3">
-            <Badge className={getSkillLevelColor(athlete.skill_level)}>
-              {athlete.skill_level}
-            </Badge>
-          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
         </div>
 
-        <CardContent className="p-4">
-          <div className="space-y-3">
-            <div>
-              <h3 className="font-semibold text-lg text-balance group-hover:text-primary transition-colors">
-                {athlete.name}
-              </h3>
-              <p className="text-sm text-muted-foreground font-medium">
-                {athlete.sport}
-              </p>
-            </div>
+        {/* Status Badge */}
+        <div className="absolute top-3 right-3">
+          <Badge
+            className={`${statusBadge.className} font-mono text-xs tracking-wider`}
+          >
+            {statusBadge.label}
+          </Badge>
+        </div>
 
-            {athlete.bio && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {athlete.bio}
-              </p>
-            )}
+        {/* Content */}
+        <div className="absolute inset-0 flex flex-col justify-end p-5">
+          <div className="space-y-2">
+            <h3 className="text-2xl font-bold tracking-tight text-balance group-hover:text-primary transition-colors">
+              {athlete.name.toUpperCase()}
+            </h3>
 
-            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {athlete.sport_categories &&
+              athlete.sport_categories.length > 0 && (
+                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wide">
+                  {athlete.sport_categories.map((c) => c.name).join(" • ")}
+                </p>
+              )}
+
+            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground pt-2">
               {athlete.country && (
                 <div className="flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
                   <span>{athlete.country}</span>
                 </div>
               )}
-
               {athlete.years_experience && (
                 <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  <span>{athlete.years_experience} years</span>
+                  <Trophy className="h-3 w-3" />
+                  <span>{athlete.years_experience} years pro</span>
                 </div>
               )}
-
-              {athlete.signature_tricks &&
-                athlete.signature_tricks.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Trophy className="h-3 w-3" />
-                    <span>
-                      {athlete.signature_tricks.length} signature tricks
-                    </span>
-                  </div>
-                )}
             </div>
 
             {athlete.sponsors && athlete.sponsors.length > 0 && (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 pt-2">
                 {athlete.sponsors.slice(0, 3).map((sponsor, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
+                  <Badge
+                    key={index}
+                    variant="outline"
+                    className="text-xs bg-background/50 backdrop-blur"
+                  >
                     {sponsor}
                   </Badge>
                 ))}
                 {athlete.sponsors.length > 3 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{athlete.sponsors.length - 3} more
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-background/50 backdrop-blur"
+                  >
+                    +{athlete.sponsors.length - 3}
                   </Badge>
                 )}
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </Link>
   );
 }

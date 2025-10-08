@@ -1,27 +1,20 @@
 "use client";
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   MapPin,
   Calendar,
   Trophy,
-  Users,
-  Globe,
+  ExternalLink,
   Instagram,
   Youtube,
-  ExternalLink,
-  Ruler,
-  Weight,
-  Star,
-  Award,
   Twitter,
   Facebook,
   Twitch,
   MessageCircle,
   Hash,
+  Globe,
+  Users,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -35,355 +28,415 @@ const getSocialIcon = (platform: SocialMediaPlatform) => {
   const iconClass = "h-5 w-5";
   switch (platform) {
     case "instagram":
-      return <Instagram className={`${iconClass} text-pink-600`} />;
+      return <Instagram className={iconClass} />;
     case "youtube":
-      return <Youtube className={`${iconClass} text-red-600`} />;
+      return <Youtube className={iconClass} />;
     case "tiktok":
-      return <Hash className={`${iconClass} text-black dark:text-white`} />;
+      return <Hash className={iconClass} />;
     case "twitter":
-      return <Twitter className={`${iconClass} text-blue-500`} />;
+      return <Twitter className={iconClass} />;
     case "facebook":
-      return <Facebook className={`${iconClass} text-blue-600`} />;
+      return <Facebook className={iconClass} />;
     case "twitch":
-      return <Twitch className={`${iconClass} text-purple-600`} />;
+      return <Twitch className={iconClass} />;
     case "discord":
-      return <MessageCircle className={`${iconClass} text-indigo-600`} />;
+      return <MessageCircle className={iconClass} />;
     case "website":
-      return <Globe className={`${iconClass} text-blue-600`} />;
+      return <Globe className={iconClass} />;
     default:
-      return <Globe className={`${iconClass} text-gray-600`} />;
+      return <Globe className={iconClass} />;
   }
 };
 
-const getSocialLabel = (platform: SocialMediaPlatform) => {
-  switch (platform) {
-    case "instagram":
-      return "Instagram";
-    case "youtube":
-      return "YouTube";
-    case "tiktok":
-      return "TikTok";
-    case "twitter":
-      return "Twitter/X";
-    case "facebook":
-      return "Facebook";
-    case "twitch":
-      return "Twitch";
-    case "discord":
-      return "Discord";
-    case "website":
-      return "Website";
-    default:
-      return "Link";
+const formatFollowerCount = (count: number) => {
+  if (count >= 1000000) {
+    return `${(count / 1000000).toFixed(1)}M`;
   }
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(1)}K`;
+  }
+  return count.toString();
+};
+
+const getStatusBadge = (status: string) => {
+  const badges = {
+    active: {
+      label: "COMPETING",
+      className: "bg-primary text-primary-foreground",
+    },
+    retired: { label: "RETIRED", className: "bg-muted text-muted-foreground" },
+    injured: {
+      label: "INJURED",
+      className: "bg-destructive text-destructive-foreground",
+    },
+    inactive: {
+      label: "INACTIVE",
+      className: "bg-secondary text-secondary-foreground",
+    },
+  };
+  return badges[status as keyof typeof badges] || badges.active;
+};
+
+const extractYouTubeId = (url: string) => {
+  const match = url.match(
+    /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/
+  );
+  return match ? match[1] : null;
+};
+
+const extractInstagramId = (url: string) => {
+  const match = url.match(/instagram\.com\/(?:p|reel)\/([^/?]+)/);
+  return match ? match[1] : null;
 };
 
 export function AthleteProfile({ athlete }: AthleteProfileProps) {
-  const [useImperial, setUseImperial] = useState(true);
-
   const calculateAge = (dateOfBirth: string) => {
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-
     if (
       monthDiff < 0 ||
       (monthDiff === 0 && today.getDate() < birthDate.getDate())
     ) {
       age--;
     }
-
     return age;
   };
 
-  const cmToFeetInches = (cm: number) => {
-    const totalInches = cm / 2.54;
-    const feet = Math.floor(totalInches / 12);
-    const inches = Math.round(totalInches % 12);
-    return `${feet}'${inches}"`;
-  };
-
-  const kgToLbs = (kg: number) => {
-    return Math.round(kg * 2.20462);
-  };
-
-  const formatHeight = (cm: number) => {
-    return useImperial ? cmToFeetInches(cm) : `${cm} cm`;
-  };
-
-  const formatWeight = (kg: number) => {
-    return useImperial ? `${kgToLbs(kg)} lbs` : `${kg} kg`;
-  };
+  const statusBadge = getStatusBadge(athlete.status);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Cover Image */}
-      {athlete.cover_image_url && (
-        <div className="relative h-64 md:h-80 mb-8 rounded-lg overflow-hidden">
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <div className="relative h-[60vh] min-h-[500px] overflow-hidden">
+        {athlete.cover_image_url ? (
           <Image
             src={athlete.cover_image_url || "/placeholder.svg"}
-            alt={`${athlete.name} cover`}
+            alt={athlete.name}
             fill
             className="object-cover"
+            priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-        </div>
-      )}
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Profile */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Header */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row gap-6">
-                <div className="relative">
-                  {athlete.profile_image_url ? (
-                    <Image
-                      src={athlete.profile_image_url || "/placeholder.svg"}
-                      alt={athlete.name}
-                      width={120}
-                      height={120}
-                      className="rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-30 h-30 bg-primary/20 rounded-full flex items-center justify-center">
-                      <span className="text-4xl font-bold text-primary">
-                        {athlete.name.charAt(0).toUpperCase()}
+        {/* Hero Content */}
+        <div className="absolute inset-0 flex items-end">
+          <div className="container mx-auto px-4 pb-12">
+            <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
+              {/* Profile Image */}
+              {athlete.profile_image_url && (
+                <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-lg overflow-hidden border-4 border-background shadow-2xl">
+                  <Image
+                    src={athlete.profile_image_url || "/placeholder.svg"}
+                    alt={athlete.name}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
+
+              {/* Name and Status */}
+              <div className="flex-1">
+                <Badge
+                  className={`${statusBadge.className} mb-3 font-mono text-xs tracking-wider`}
+                >
+                  {statusBadge.label}
+                </Badge>
+                <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-balance mb-2 text-foreground">
+                  {athlete.name.toUpperCase()}
+                </h1>
+                {athlete.sport_categories &&
+                  athlete.sport_categories.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {athlete.sport_categories.map((category) => (
+                        <Link
+                          key={category.id}
+                          href={`/${category.slug}`}
+                          className="text-muted-foreground hover:text-primary transition-colors text-sm font-medium uppercase tracking-wide"
+                        >
+                          {category.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  {athlete.country && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>
+                        {athlete.city ? `${athlete.city}, ` : ""}
+                        {athlete.country}
+                      </span>
+                    </div>
+                  )}
+                  {athlete.date_of_birth && (
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        {calculateAge(athlete.date_of_birth)} years old
+                      </span>
+                    </div>
+                  )}
+                  {athlete.years_experience && (
+                    <div className="flex items-center gap-2">
+                      <Trophy className="h-4 w-4" />
+                      <span>{athlete.years_experience} years pro</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Primary CTA */}
+              {athlete.primary_cta && (
+                <Button size="lg" className="font-bold" asChild>
+                  <a
+                    href={athlete.primary_cta.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {athlete.primary_cta.text}
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-12">
+            {/* Bio */}
+            {athlete.bio && (
+              <section>
+                <p className="text-lg leading-relaxed text-foreground">
+                  {athlete.bio}
+                </p>
+              </section>
+            )}
+
+            {/* Video Embeds */}
+            {athlete.video_embeds && athlete.video_embeds.length > 0 && (
+              <section>
+                <h2 className="text-3xl font-bold mb-6 uppercase tracking-tight">
+                  Featured Videos
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {athlete.video_embeds.map((video) => (
+                    <div key={video.id} className="space-y-2">
+                      {video.platform === "youtube" &&
+                        extractYouTubeId(video.url) && (
+                          <div className="relative aspect-video rounded-lg overflow-hidden bg-secondary">
+                            <iframe
+                              src={`https://www.youtube.com/embed/${extractYouTubeId(
+                                video.url
+                              )}`}
+                              title={video.title || "Video"}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              className="absolute inset-0 w-full h-full"
+                            />
+                          </div>
+                        )}
+                      {video.platform === "instagram" &&
+                        extractInstagramId(video.url) && (
+                          <div className="relative aspect-square rounded-lg overflow-hidden bg-secondary">
+                            <iframe
+                              src={`https://www.instagram.com/p/${extractInstagramId(
+                                video.url
+                              )}/embed`}
+                              title={video.title || "Instagram post"}
+                              allowFullScreen
+                              className="absolute inset-0 w-full h-full"
+                            />
+                          </div>
+                        )}
+                      {video.title && (
+                        <p className="text-sm text-muted-foreground">
+                          {video.title}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Timeline */}
+            {athlete.timeline_sections &&
+              athlete.timeline_sections.length > 0 && (
+                <section>
+                  <h2 className="text-3xl font-bold mb-8 uppercase tracking-tight">
+                    Timeline
+                  </h2>
+                  <div className="space-y-8">
+                    {athlete.timeline_sections
+                      .sort((a, b) => a.order - b.order)
+                      .map((section, index) => (
+                        <div
+                          key={section.id}
+                          className="relative pl-8 border-l-2 border-primary/30"
+                        >
+                          <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-primary" />
+                          <div className="space-y-2">
+                            <div className="flex items-baseline gap-3">
+                              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                                {section.year ||
+                                  section.date_range ||
+                                  `Section ${index + 1}`}
+                              </span>
+                              <h3 className="text-xl font-bold uppercase tracking-tight">
+                                {section.title}
+                              </h3>
+                            </div>
+                            <p className="text-muted-foreground leading-relaxed">
+                              {section.content}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </section>
+              )}
+
+            {/* Signature Tricks */}
+            {athlete.signature_tricks &&
+              athlete.signature_tricks.length > 0 && (
+                <section>
+                  <h2 className="text-3xl font-bold mb-6 uppercase tracking-tight">
+                    Signature Tricks
+                  </h2>
+                  <div className="flex flex-wrap gap-3">
+                    {athlete.signature_tricks.map((trick) => (
+                      <Link
+                        key={trick.id}
+                        href={`/tricks/${trick.slug}`}
+                        className="px-4 py-2 bg-secondary hover:bg-primary hover:text-primary-foreground transition-colors rounded-md font-medium"
+                      >
+                        {trick.name}
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+            {/* Achievements */}
+            {athlete.notable_achievements && (
+              <section>
+                <h2 className="text-3xl font-bold mb-6 uppercase tracking-tight">
+                  Achievements
+                </h2>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {athlete.notable_achievements}
+                </p>
+              </section>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Sponsors */}
+            {athlete.sponsors && athlete.sponsors.length > 0 && (
+              <div className="bg-card rounded-lg p-6 border border-border">
+                <h3 className="text-sm font-mono uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Sponsors
+                </h3>
+                <div className="space-y-2">
+                  {athlete.sponsors.map((sponsor, index) => (
+                    <div
+                      key={index}
+                      className="px-3 py-2 bg-secondary rounded text-center font-medium text-sm"
+                    >
+                      {sponsor}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Social Links */}
+            {athlete.social_links && athlete.social_links.length > 0 && (
+              <div className="bg-card rounded-lg p-6 border border-border">
+                <h3 className="text-sm font-mono uppercase tracking-wider text-muted-foreground mb-4">
+                  Connect
+                </h3>
+                <div className="space-y-2">
+                  {athlete.social_links.map((link, index) => (
+                    <a
+                      key={index}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 rounded-lg hover:bg-secondary transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        {getSocialIcon(link.platform)}
+                        <span className="font-medium text-sm">
+                          {link.label || link.platform}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {link.follower_count && (
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {formatFollowerCount(link.follower_count)}
+                          </span>
+                        )}
+                        <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Stats */}
+            {(athlete.height_cm || athlete.weight_kg || athlete.stance) && (
+              <div className="bg-card rounded-lg p-6 border border-border">
+                <h3 className="text-sm font-mono uppercase tracking-wider text-muted-foreground mb-4">
+                  Stats
+                </h3>
+                <div className="space-y-3">
+                  {athlete.height_cm && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Height
+                      </span>
+                      <span className="font-medium">
+                        {athlete.height_cm} cm
+                      </span>
+                    </div>
+                  )}
+                  {athlete.weight_kg && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Weight
+                      </span>
+                      <span className="font-medium">
+                        {athlete.weight_kg} kg
+                      </span>
+                    </div>
+                  )}
+                  {athlete.stance && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Stance
+                      </span>
+                      <span className="font-medium capitalize">
+                        {athlete.stance}
                       </span>
                     </div>
                   )}
                 </div>
-
-                <div className="flex-1 space-y-4">
-                  <div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                      <h1 className="text-3xl font-bold text-balance">
-                        {athlete.name}
-                      </h1>
-                    </div>
-                    {athlete.sport_categories &&
-                      athlete.sport_categories.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {athlete.sport_categories.map((category) => (
-                            <Link
-                              key={category.id}
-                              href={`/${category.slug}`}
-                              className="hover:opacity-80 transition-opacity"
-                            >
-                              <Badge variant="secondary" className="text-sm">
-                                {category.name}
-                              </Badge>
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                  </div>
-
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    {athlete.country && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        <span>
-                          {athlete.city ? `${athlete.city}, ` : ""}
-                          {athlete.country}
-                        </span>
-                      </div>
-                    )}
-
-                    {athlete.date_of_birth && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>
-                          {calculateAge(athlete.date_of_birth)} years old
-                        </span>
-                      </div>
-                    )}
-
-                    {athlete.years_experience && (
-                      <div className="flex items-center gap-1">
-                        <Trophy className="h-4 w-4" />
-                        <span>{athlete.years_experience} years experience</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* <AthleteInteractions athlete={athlete} /> */}
-                </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Bio */}
-          {athlete.bio && (
-            <Card>
-              <CardHeader>
-                <CardTitle>About</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  {athlete.bio}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Signature Tricks */}
-          {athlete.signature_tricks && athlete.signature_tricks.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5" />
-                  Signature Tricks
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {athlete.signature_tricks.map((trick) => (
-                    <Link
-                      key={trick.id}
-                      href={`/tricks/${trick.slug}`}
-                      className="hover:opacity-80 transition-opacity"
-                    >
-                      <Badge variant="secondary" className="text-sm">
-                        {trick.name}
-                      </Badge>
-                    </Link>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Achievements */}
-          {athlete.notable_achievements && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5" />
-                  Notable Achievements
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  {athlete.notable_achievements}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Stats */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle>Stats</CardTitle>
-              <ToggleGroup
-                type="single"
-                value={useImperial ? "imperial" : "metric"}
-                onValueChange={(value) => {
-                  if (value) setUseImperial(value === "imperial");
-                }}
-                className="h-8"
-              >
-                <ToggleGroupItem value="imperial" className="h-8 text-xs px-3">
-                  Imperial
-                </ToggleGroupItem>
-                <ToggleGroupItem value="metric" className="h-8 text-xs px-3">
-                  Metric
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {athlete.height_cm && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Ruler className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Height</span>
-                  </div>
-                  <span className="font-medium">
-                    {formatHeight(athlete.height_cm)}
-                  </span>
-                </div>
-              )}
-
-              {athlete.weight_kg && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Weight className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Weight</span>
-                  </div>
-                  <span className="font-medium">
-                    {formatWeight(athlete.weight_kg)}
-                  </span>
-                </div>
-              )}
-
-              {athlete.stance && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Stance</span>
-                  <span className="font-medium capitalize">
-                    {athlete.stance}
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Sponsors */}
-          {athlete.sponsors && athlete.sponsors.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Sponsors
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {athlete.sponsors.map((sponsor, index) => (
-                    <Badge
-                      key={index}
-                      variant="outline"
-                      className="w-full justify-center py-2"
-                    >
-                      {sponsor}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Social Links */}
-          {athlete.social_links && athlete.social_links.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Connect</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {athlete.social_links.map((link, index) => (
-                  <a
-                    key={index}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors group"
-                  >
-                    {getSocialIcon(link.platform)}
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-sm font-medium">
-                        {link.label || getSocialLabel(link.platform)}
-                      </span>
-                    </div>
-                    <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                  </a>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
