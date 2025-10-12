@@ -21,7 +21,7 @@ export default async function EventsPage({ params }: EventsPageProps) {
     notFound();
   }
 
-  // Get events for this category
+  // Get all events for this category
   const events = await getEventsByCategory(category);
 
   return <EventsPageClient events={events} currentCategory={currentCategory} />;
