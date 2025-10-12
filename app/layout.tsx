@@ -92,7 +92,7 @@ export default async function RootLayout({
       </head>
       <body className="font-sans antialiased">
         <Toaster position="top-center" closeButton />
-        <PWARegister />
+        {/* <PWARegister /> */}
         <StructuredData data={generateWebsiteStructuredData()} />
         <StructuredData data={generateOrganizationStructuredData()} />
 
