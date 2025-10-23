@@ -25,7 +25,6 @@ import { supabase } from "@/utils/supabase/client";
 import { useMasterCategories } from "@/hooks/use-categories";
 import { useUserProgress } from "@/contexts/user-progress-provider";
 import { useTricks } from "@/contexts/tricks-provider";
-import { InstallPWAApp } from "../install-pwa-app";
 
 export function UserDashboard() {
   const { celebrate } = useConfetti();
@@ -218,7 +217,7 @@ export function UserDashboard() {
               <Wishlist />
               <FeaturePoll />
               <MiniContributeCTA variant="dashboard" />
-              <InstallPWAApp />
+              {/* PWA install component removed */}
             </div>
           </div>
         </div>

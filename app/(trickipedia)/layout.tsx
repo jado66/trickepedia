@@ -1,8 +1,9 @@
 import { TrickipediaLayoutServer } from "./layout-server";
 import { TrickipediaFooter } from "@/components/trickipedia-footer";
-import { ThemeProvider } from "@/components/theme-provider";
 
-import "../globals.css";
+// NOTE: Global CSS should only be imported once in the root layout.
+// The previous duplicate import here could trigger per-route CSS loading
+// leading to a flash of unstyled content (FOUC) on initial render.
 
 export default async function Layout({
   children,
@@ -13,17 +14,9 @@ export default async function Layout({
   // The AuthProvider will handle session initialization client-side
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="trickipedia"
-      themes={["trickipedia", "dark"]}
-      storageKey="trickipedia-theme"
-      enableSystem={false}
-    >
-      <TrickipediaLayoutServer>
-        {children}
-        <TrickipediaFooter />
-      </TrickipediaLayoutServer>
-    </ThemeProvider>
+    <TrickipediaLayoutServer>
+      {children}
+      <TrickipediaFooter />
+    </TrickipediaLayoutServer>
   );
 }

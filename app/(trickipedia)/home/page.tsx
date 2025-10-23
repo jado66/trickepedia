@@ -4,16 +4,13 @@ import { RecentTricks } from "@/components/recent-tricks";
 import { CommunityStats } from "@/components/community-stats";
 import { TrickipediaHeroSection } from "@/components/trickipedia-hero-section";
 import ContributingSection from "@/components/contributing-section";
-import { InstallPWAApp } from "@/components/install-pwa-app";
 
 export default async function HomePageServer() {
   return (
     <main>
       <TrickipediaHeroSection />
       {/* Get the App Section */}
-      <div className="py-10 px-4">
-        <InstallPWAApp />
-      </div>
+      {/* PWA install section removed */}
       <hr className="mb-10 border-t border-muted" />
       <ContributingSection />
       <FeaturedCategories />

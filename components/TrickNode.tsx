@@ -31,7 +31,7 @@ const TrickNode = ({ data }: { data: TrickNodeData }) => {
         position={isMobile ? Position.Top : Position.Left}
         className="opacity-0"
       />
-      <div className="font-sbold text-md mb-1">{trick.name}</div>
+      <div className="font-sbold text-md mb-1 capitalize">{trick.name}</div>
       {/* {trick.difficulty_level && (
         <div className="text-xs text-gray-500">
           Difficulty: {trick.difficulty_level}/10

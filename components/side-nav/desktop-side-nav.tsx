@@ -197,7 +197,7 @@ export function DesktopSideNav({ onItemClick }: { onItemClick?: () => void }) {
                                       <Link
                                         key={trick.slug}
                                         href={`/${category.slug}/${subcategory.slug}/${trick.slug}`}
-                                        className="block rounded-md px-3 py-1.5 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-muted"
+                                        className="block rounded-md px-3 py-1.5 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-muted capitalize"
                                         onClick={onItemClick}
                                       >
                                         {trick.name}

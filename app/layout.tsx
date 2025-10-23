@@ -2,8 +2,8 @@
 
 import React from "react";
 import type { Metadata } from "next";
+import { ThemeProvider } from "@/components/theme-provider";
 
-import { PWARegister } from "@/components/pwa-register";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/react";
 import { StructuredData } from "@/components/structured-data";
@@ -48,8 +48,9 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/favicon/site.webmanifest" />
-        <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
+  {/* PWA manifest & Apple tags removed to disable PWA behavior */}
+  {/* <link rel="manifest" href="/favicon/site.webmanifest" /> */}
+  {/* <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" /> */}
         <link
           rel="icon"
           type="image/png"
@@ -63,53 +64,43 @@ export default async function RootLayout({
           href="/favicon/favicon-16x16.png"
         />
         <link rel="icon" href="/favicon/favicon.ico" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-title" content="Trickipedia" />
-        <meta
-          name="apple-mobile-web-app-status-bar-style"
-          content="black-translucent"
-        />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="application-name" content="Trickipedia" />
+        {/* Removed PWA-specific meta tags */}
+        {/* <meta name="apple-mobile-web-app-capable" content="yes" /> */}
+        {/* <meta name="apple-mobile-web-app-title" content="Trickipedia" /> */}
+        {/* <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" /> */}
+        {/* <meta name="mobile-web-app-capable" content="yes" /> */}
+        {/* <meta name="application-name" content="Trickipedia" /> */}
+        {/* Keeping theme-color for browser UI coloring */}
         <meta name="theme-color" content="#000000" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Trickipedia" />
-        {/* PWA Debug Script - Remove in production */}
-        {process.env.NODE_ENV === "development" && (
-          <script src="/pwa-debug.js" async></script>
-        )}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-      (function() {
-        const theme = localStorage.getItem('theme') || 'trickipedia';
-        document.documentElement.classList.add(theme);
-      })();
-    `,
-          }}
-        />
+        {/* Removed development-only PWA debug script */}
       </head>
       <body className="font-sans antialiased">
-        <Toaster position="top-center" closeButton />
-        {/* <PWARegister /> */}
-        <StructuredData data={generateWebsiteStructuredData()} />
-        <StructuredData data={generateOrganizationStructuredData()} />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="trickipedia"
+          themes={["trickipedia", "dark"]}
+          storageKey="trickipedia-theme"
+          enableSystem={false}
+        >
+          <Toaster position="top-center" closeButton />
 
-        <ConfettiProvider>
-          <UserProvider>
-            <CategoriesProvider>
-              <TricksProvider>
-                <WishlistProvider>
-                  <UserProgressProvider>
-                    <NotificationsProvider>{children}</NotificationsProvider>
-                  </UserProgressProvider>
-                </WishlistProvider>
-              </TricksProvider>
-            </CategoriesProvider>
-          </UserProvider>
-        </ConfettiProvider>
+          <StructuredData data={generateWebsiteStructuredData()} />
+          <StructuredData data={generateOrganizationStructuredData()} />
 
+          <ConfettiProvider>
+            <UserProvider>
+              <CategoriesProvider>
+                <TricksProvider>
+                  <WishlistProvider>
+                    <UserProgressProvider>
+                      <NotificationsProvider>{children}</NotificationsProvider>
+                    </UserProgressProvider>
+                  </WishlistProvider>
+                </TricksProvider>
+              </CategoriesProvider>
+            </UserProvider>
+          </ConfettiProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>
