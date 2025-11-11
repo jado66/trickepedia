@@ -57,134 +57,7 @@ const features = [
   },
 ];
 
-function InstallAppDialogTrigger({
-  ios,
-  android,
-  buttonClassName = "",
-}: {
-  ios: boolean;
-  android: boolean;
-  buttonClassName?: string;
-}) {
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="lg" className={buttonClassName}>
-          Install App
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-primary" /> Install Trickipedia
-          </DialogTitle>
-          <DialogDescription>
-            Add the app to your device for faster access and offline support.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-6 text-sm">
-          {ios && (
-            <div>
-              <h3 className="font-semibold mb-2 text-muted-foreground uppercase tracking-wide text-xs">
-                iOS (Safari)
-              </h3>
-              <ol className="space-y-3">
-                <li className="flex gap-3 items-start">
-                  <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex-shrink-0">
-                    1
-                  </span>
-                  Tap the Share icon in Safari.
-                </li>
-                <li className="flex gap-3 items-start">
-                  <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex-shrink-0">
-                    2
-                  </span>
-                  Choose “Add to Home Screen”.
-                </li>
-                <li className="flex gap-3 items-start">
-                  <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex-shrink-0">
-                    3
-                  </span>
-                  Tap “Add” to finish.
-                </li>
-              </ol>
-            </div>
-          )}
-          {android && (
-            <div>
-              <h3 className="font-semibold mb-2 text-muted-foreground uppercase tracking-wide text-xs">
-                Android (Chrome / Edge)
-              </h3>
-              <ol className="space-y-3">
-                <li className="flex gap-3 items-start">
-                  <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex-shrink-0">
-                    1
-                  </span>
-                  Open the browser menu (⋮).
-                </li>
-                <li className="flex gap-3 items-start">
-                  <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex-shrink-0">
-                    2
-                  </span>
-                  Tap “Install app” or “Add to Home screen”.
-                </li>
-                <li className="flex gap-3 items-start">
-                  <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex-shrink-0">
-                    3
-                  </span>
-                  Confirm the prompt.
-                </li>
-              </ol>
-            </div>
-          )}
-          {!ios && !android && (
-            <div>
-              <h3 className="font-semibold mb-2 text-muted-foreground uppercase tracking-wide text-xs">
-                Desktop
-              </h3>
-              <ol className="space-y-3">
-                <li className="flex gap-3 items-start">
-                  <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex-shrink-0">
-                    1
-                  </span>
-                  Click the install icon in the address bar (if visible) or open
-                  the browser menu.
-                </li>
-                <li className="flex gap-3 items-start">
-                  <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex-shrink-0">
-                    2
-                  </span>
-                  Choose “Install App” / “Install Trickipedia”.
-                </li>
-                <li className="flex gap-3 items-start">
-                  <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex-shrink-0">
-                    3
-                  </span>
-                  Confirm the dialog.
-                </li>
-              </ol>
-            </div>
-          )}
-          <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground leading-relaxed">
-            If you don’t see an install option, make sure you’re using a modern
-            browser and have visited the site online at least once so assets can
-            cache.
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 export function FeaturesShowcase() {
-  const [isIOS, setIsIOS] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
-
-  useEffect(() => {
-    const ua = navigator.userAgent;
-    setIsIOS(/iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream);
-    setIsAndroid(/Android/.test(ua));
-  }, []);
   const primaryFeatures = features.slice(0, 2);
   const combinedFeatures = features.slice(2, 4); // last two
 
@@ -204,17 +77,6 @@ export function FeaturesShowcase() {
         <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
           {feature.description}
         </p>
-        {feature.cta === "Install App" && feature.href === null ? (
-          <InstallAppDialogTrigger
-            ios={isIOS}
-            android={isAndroid}
-            buttonClassName=""
-          />
-        ) : (
-          <Button asChild variant="outline" size="lg">
-            <Link href={feature.href || "#"}>{feature.cta}</Link>
-          </Button>
-        )}
       </div>
     );
   }
@@ -253,7 +115,16 @@ export function FeaturesShowcase() {
                     {feature.description}
                   </p>
                   {feature.cta === "Install App" && feature.href === null ? (
-                    <InstallAppDialogTrigger ios={isIOS} android={isAndroid} />
+                    mounted ? (
+                      <InstallAppDialogTrigger
+                        ios={isIOS}
+                        android={isAndroid}
+                      />
+                    ) : (
+                      <Button variant="outline" size="lg">
+                        Install App
+                      </Button>
+                    )
                   ) : (
                     <Button asChild variant="outline" size="lg">
                       <Link href={feature.href || "#"}>{feature.cta}</Link>

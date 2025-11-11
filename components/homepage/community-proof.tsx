@@ -52,11 +52,11 @@ export function CommunityProof() {
                 &quot;{testimonial.quote}&quot;
               </p>
               <div className="flex items-center gap-4">
-                {/* <img
+                <img
                   src={testimonial.avatar || "/placeholder.svg"}
                   alt={testimonial.author}
                   className="w-12 h-12 rounded-full object-cover"
-                /> */}
+                />
                 <div>
                   <div className="font-semibold">{testimonial.author}</div>
                   <div className="text-sm text-muted-foreground">
