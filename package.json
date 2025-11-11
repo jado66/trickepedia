@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev  --port 2001",
+    "dev": "next dev  --port 2002",
     "build": "next build ",
     "start": "next start",
     "lint": "npx eslint . --config eslint.config.mjs --quiet",
