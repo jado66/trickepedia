@@ -55,15 +55,6 @@ const features = [
     cta: "Join Community",
     href: "/signup",
   },
-  {
-    icon: Zap,
-    title: "Works Offline",
-    description:
-      "Install as a PWA and access tricks anywhere. Train at the gym, park, or trampoline center without internet.",
-    image: "/placeholder.svg?height=400&width=600",
-    cta: "Install App",
-    href: null, // handled via dialog
-  },
 ];
 
 function InstallAppDialogTrigger({
