@@ -114,22 +114,6 @@ export function FeaturesShowcase() {
                   <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
                     {feature.description}
                   </p>
-                  {feature.cta === "Install App" && feature.href === null ? (
-                    mounted ? (
-                      <InstallAppDialogTrigger
-                        ios={isIOS}
-                        android={isAndroid}
-                      />
-                    ) : (
-                      <Button variant="outline" size="lg">
-                        Install App
-                      </Button>
-                    )
-                  ) : (
-                    <Button asChild variant="outline" size="lg">
-                      <Link href={feature.href || "#"}>{feature.cta}</Link>
-                    </Button>
-                  )}
                 </div>
                 <div
                   className={
