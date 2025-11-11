@@ -1,4 +1,4 @@
-// 3. app/(trickipedia)/TrickipediaLayoutClient.tsx - UPDATED
+// 3. app/TrickipediaLayoutClient.tsx - UPDATED
 "use client";
 
 import { useState } from "react";

@@ -1,6 +1,6 @@
 "use client";
 
-import { signup } from "@/app/(trickipedia)/actions/auth";
+import { signup } from "@/app/actions/auth";
 import {
   Card,
   CardContent,

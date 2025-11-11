@@ -8,7 +8,7 @@ import {
 } from "@/components/gym-management/scheduler-header-tabs";
 import { CalendarGrid } from "@/components/gym-management/calendar/calendar-grid";
 import { CalendarHeader } from "@/components/gym-management/calendar/calendar-header";
-import DashboardPage from "@/app/(trickipedia)/dashboard/page";
+import DashboardPage from "@/app/dashboard/page";
 import ResourcesTab from "./resources/resoureces-tab";
 import RecurringEventsTab from "./recurring/recurring-tab";
 import DashboardTab from "./dashboard/dashboard-tab";

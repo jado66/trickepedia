@@ -15,7 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { deleteBugReport } from "@/app/(trickipedia)/actions/bug-report";
+import { deleteBugReport } from "@/app/actions/bug-report";
 
 interface DeleteBugButtonProps {
   id: string;

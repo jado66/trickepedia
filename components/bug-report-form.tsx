@@ -17,7 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
-import { submitBugReport } from "@/app/(trickipedia)/actions/bug-report";
+import { submitBugReport } from "@/app/actions/bug-report";
 
 export function BugReportForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
