@@ -2,7 +2,7 @@
 
 import { useConfetti } from "@/contexts";
 import { motion } from "framer-motion";
-import { useState, useRef, useLayoutEffect, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 
 interface Trick {
   id: string;
@@ -150,10 +150,10 @@ export function InteractiveSkillTreeDemo() {
     });
   };
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     // Measure after layout
     recomputeVerticalLines();
-  }, [completedTricks]);
+  }, [completedTricks, verticalLevels]);
 
   useEffect(() => {
     const handleResize = () => recomputeVerticalLines();
