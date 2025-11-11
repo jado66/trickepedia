@@ -1,12 +1,15 @@
 {
-  "name": "my-app",
-  "version": "0.1.0",
+  "name": "trickipedia",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev  --port 2001",
+    "build": "next build ",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "npx eslint . --config eslint.config.mjs --quiet",
+    "tsc": "tsc --noEmit",
+    "seo:analyze": "npx next-sitemap",
+    "seo:lighthouse": "npx lighthouse http://localhost:3000 --output html --output-path ./lighthouse-report.html"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
