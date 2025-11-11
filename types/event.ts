@@ -1,0 +1,44 @@
+export interface Event {
+  id: string;
+  master_category_id: string;
+  title: string;
+  description: string | null;
+  event_type: string;
+  custom_event_type: string | null;
+  start_date: string;
+  end_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  location_name: string | null;
+  location_address: string | null;
+  location_scope: string | null;
+  location_city: string | null;
+  location_state: string | null;
+  location_country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  geocoded_at: string | null;
+  event_url: string | null;
+  image_url: string | null;
+  media_urls: string[] | null;
+  skill_level: string | null;
+  entry_fee: string | null;
+  organizer_name: string | null;
+  organizer_contact: string | null;
+  age_restrictions: string | null;
+  equipment_requirements: string | null;
+  registration_deadline: string | null;
+  max_participants: number | null;
+  social_links: Record<string, string> | null;
+  status: string;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  master_categories?: {
+    name: string;
+    slug: string;
+    color: string | null;
+    move_name: string;
+  };
+}

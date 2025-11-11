@@ -1,0 +1,245 @@
+// Small, deterministic seed data used for debugging and "start over" flows.
+// Keep entries minimal and type-compatible with types/gym-management.ts
+
+import { seedMembers } from "../students-seed";
+
+export { seedMembers };
+
+export const seedClasses = [
+  {
+    id: "class-1",
+    name: "Youth Tumbling",
+    instructors: ["Coach Jen"],
+    time: "16:00 - 17:00",
+    capacity: 20,
+    // Provide concrete enrolled students so UI lists match counts
+    students: [
+      "member-1",
+      "member-2",
+      "member-3",
+      "member-4",
+      "member-5",
+      "member-6",
+      "member-7",
+      "member-8",
+    ],
+    enrolled: 8,
+    location: "Main Gym",
+    level: "Beginner",
+    status: "active",
+    duration: 60,
+    price: 15,
+    ageRange: "6-12",
+  },
+  {
+    id: "class-2",
+    name: "Advanced Parkour",
+    instructors: ["Mike Johnson"],
+    time: "18:00 - 19:30",
+    capacity: 12,
+    // 10 specific advanced/older members (arbitrary selection)
+    students: [
+      "member-9",
+      "member-11",
+      "member-13",
+      "member-15",
+      "member-18",
+      "member-19",
+      "member-21",
+      "member-23",
+      "member-25",
+      "member-27",
+    ],
+    enrolled: 10,
+    location: "Parkour Hall",
+    level: "Advanced",
+    status: "active",
+    duration: 90,
+    price: 20,
+    ageRange: "13+",
+  },
+];
+
+export const seedEquipment = [
+  {
+    id: "equip-1",
+    name: "Balance Beam",
+    category: "Gymnastics",
+    location: "Main Gym",
+    status: "good",
+    lastInspection: "2025-07-01",
+    nextInspection: "2025-10-01",
+    purchaseDate: "2020-03-15",
+    warranty: "2026-03-15",
+    notes: "Well maintained",
+  },
+];
+
+export const seedIncidents = [
+  {
+    id: "inc-1",
+    memberName: "Alice Park",
+    incidentType: "sprain",
+    severity: "minor",
+    status: "resolved",
+    dateTime: "2025-08-10T10:15:00",
+    location: "Main Gym",
+    description: "Twisted ankle during tumbling",
+    staffMember: "Coach Jen",
+    actionTaken: "RICE and rest",
+    followUpRequired: false,
+  },
+];
+
+export const seedWaivers = [
+  {
+    id: "waiver-1",
+    memberName: "Alice Park",
+    memberEmail: "alice.park@example.com",
+    waiverType: "Standard",
+    status: "signed",
+    signedDate: "2024-01-10",
+    expiryDate: "2026-01-10",
+    notes: "",
+    archived: false,
+  },
+];
+
+export const seedStaff = [
+  {
+    id: "staff-1",
+    name: "Coach Jen",
+    email: "jen.coach@example.com",
+    phone: "555-0404",
+    role: "Head Coach",
+    specialties: ["Tumbling", "Youth"],
+    status: "active",
+    schedule: "09:00 - 17:00",
+    classes: 5,
+    hourlyRate: 25,
+    certifications: ["CPR"],
+    emergencyContact: "Sam Coach - 555-0505",
+    archived: false,
+  },
+  {
+    id: "staff-2",
+    name: "Mike Johnson",
+    email: "mike.j@example.com",
+    phone: "555-0406",
+    role: "Parkour Instructor",
+    specialties: ["Parkour", "Advanced Training"],
+    status: "active",
+    schedule: "14:00 - 22:00",
+    classes: 4,
+    hourlyRate: 28,
+    certifications: ["CPR", "First Aid"],
+    emergencyContact: "Lisa Johnson - 555-0407",
+    archived: false,
+  },
+  {
+    id: "staff-3",
+    name: "Sarah Martinez",
+    email: "sarah.m@example.com",
+    phone: "555-0408",
+    role: "Assistant Coach",
+    specialties: ["Gymnastics", "Flexibility"],
+    status: "active",
+    schedule: "10:00 - 18:00",
+    classes: 6,
+    hourlyRate: 22,
+    certifications: ["CPR", "USAG Level 1"],
+    emergencyContact: "Carlos Martinez - 555-0409",
+    archived: false,
+  },
+  {
+    id: "staff-4",
+    name: "David Chen",
+    email: "david.chen@example.com",
+    phone: "555-0410",
+    role: "Strength & Conditioning Coach",
+    specialties: ["Strength Training", "Conditioning"],
+    status: "active",
+    schedule: "06:00 - 14:00",
+    classes: 3,
+    hourlyRate: 30,
+    certifications: ["CPR", "CSCS", "NSCA"],
+    emergencyContact: "Amy Chen - 555-0411",
+    archived: false,
+  },
+  {
+    id: "staff-5",
+    name: "Emma Thompson",
+    email: "emma.t@example.com",
+    phone: "555-0412",
+    role: "Front Desk Manager",
+    specialties: ["Customer Service", "Administration"],
+    status: "active",
+    schedule: "08:00 - 16:00",
+    classes: 0,
+    hourlyRate: 18,
+    certifications: ["CPR"],
+    emergencyContact: "Robert Thompson - 555-0413",
+    archived: false,
+  },
+  {
+    id: "staff-6",
+    name: "Alex Rivera",
+    email: "alex.r@example.com",
+    phone: "555-0414",
+    role: "Trampoline Specialist",
+    specialties: ["Trampoline", "Aerial Skills"],
+    status: "active",
+    schedule: "15:00 - 21:00",
+    classes: 4,
+    hourlyRate: 26,
+    certifications: ["CPR", "First Aid", "USA Gymnastics Trampoline"],
+    emergencyContact: "Maria Rivera - 555-0415",
+    archived: false,
+  },
+];
+
+export const seedPayments = [
+  {
+    id: "pay-1",
+    member: "Alice Park",
+    amount: "$45.00",
+    type: "Monthly Membership",
+    status: "paid",
+    date: "2025-09-01",
+    method: "Card",
+  },
+];
+
+export const seedMembershipPlans = [
+  {
+    id: "plan-1",
+    name: "Premium Gymnastics",
+    price: 89,
+    billingInterval: "monthly",
+    description: "Unlimited gymnastics classes + open gym access",
+    status: "active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "plan-2",
+    name: "Open Gym",
+    price: 45,
+    billingInterval: "monthly",
+    description: "Unlimited open gym sessions",
+    status: "active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+export const ALL_SEEDS = {
+  members: seedMembers,
+  classes: seedClasses,
+  equipment: seedEquipment,
+  incidents: seedIncidents,
+  waivers: seedWaivers,
+  staff: seedStaff,
+  payments: seedPayments,
+  membershipPlans: seedMembershipPlans,
+};
