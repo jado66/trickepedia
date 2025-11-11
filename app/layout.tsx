@@ -1,3 +1,5 @@
+import "./globals.css";
+
 import { ConfettiProvider } from "@/contexts/confetti-provider";
 import { UserProvider } from "@/contexts/user-provider";
 import { UserProgressProvider } from "@/contexts/user-progress-provider";
