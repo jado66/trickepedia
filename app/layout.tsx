@@ -38,12 +38,7 @@ export default function RootLayout({
                 <TricksProvider>
                   <WishlistProvider>
                     <UserProgressProvider>
-                      <NotificationsProvider>
-                        <TrickipediaLayoutServer>
-                          {children}
-                          <TrickipediaFooter />
-                        </TrickipediaLayoutServer>
-                      </NotificationsProvider>
+                      <NotificationsProvider>{children}</NotificationsProvider>
                     </UserProgressProvider>
                   </WishlistProvider>
                 </TricksProvider>
