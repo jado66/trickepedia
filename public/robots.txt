@@ -1,0 +1,24 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /login/
+Disallow: /_next/
+Disallow: /_vercel/
+Disallow: /private/
+
+# GPTBot
+User-agent: GPTBot
+Disallow: /
+
+# Google-Extended
+User-agent: Google-Extended
+Disallow: /
+
+# Host
+Host: https://trickipedia.app
+
+# Sitemaps
+Sitemap: https://trickipedia.app/sitemap.xml
